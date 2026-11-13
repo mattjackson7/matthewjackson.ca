@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Results | Matthew Jackson</title>
+  <meta name="description" content="Three national cheerleading titles, four wins on the road, four-time Academic All-Canadian, and five seasons of varsity swimming.">
+  <meta name="theme-color" content="#07222e">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%2307222e'/%3E%3Ccircle cx='16' cy='16' r='6' fill='%23ff6a55'/%3E%3C/svg%3E">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@700;800;900&family=Hanken+Grotesk:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"></script>
+  <script defer src="js/math.js?v=11"></script>
+  <link rel="stylesheet" href="css/site.css?v=14">
+</head>
+<body class="page-results" data-page="results">
+
+  <header class="nav">
+    <a class="brand" href="index.html"><span class="full">Matthew Jackson</span><span class="short">MJ</span></a>
+    <nav aria-label="Primary">
+      <a class="keep" href="projects.html">Projects</a>
+      <a href="experience.html">Experience</a>
+      <a href="education.html">Education</a>
+      <a href="results.html" aria-current="page">Results</a>
+      <a class="keep" href="contact.html">Contact</a>
+      <a class="keep" href="Resume.pdf">Resume</a>
+      <button class="keep map-open" type="button" hidden>Map</button>
+    </nav>
+  </header>
+
+  <main class="page">
+    <section id="overview">
+      <p class="kicker">Varsity sport, 2021 to 2026</p>
+      <h1 class="page-title">Results</h1>
+      <p class="lede">Two varsity teams and an honours physics degree at the same time, at the University of Guelph, with Academic All-Canadian in four of five years. Swimming is where the pool on every page of this site comes from.</p>
+      <dl class="stats res-stats">
+        <div style="--c:#ff8fb8"><dt>national titles</dt><dd data-count="3">3</dd></div>
+        <div style="--c:#ff8fb8"><dt>wins on the road</dt><dd data-count="4">4</dd></div>
+        <div style="--c:#ffd166"><dt>Academic All-Canadian</dt><dd data-count="4" data-suffix="&times;">4&times;</dd></div>
+        <div style="--c:#7cc4ff"><dt>varsity seasons</dt><dd data-count="9">9</dd></div>
+        <div style="--c:#ff8fb8"><dt>athletes captained</dt><dd data-count="40" data-prefix="~">~40</dd></div>
+      </dl>
+      <figure class="figure">
+        <svg class="gantt seasons" id="seasons" role="img" aria-label="Season by season: five swimming seasons; four cheerleading seasons, second at nationals then three national titles, with a road win each year; Academic All-Canadian in years one, two, four and five."></svg>
+        <figcaption><span id="season-read">Fig. 1. Five seasons, three tracks. Hover or tap a season to read it.</span></figcaption>
+      </figure>
+    </section>
+
+    <section class="block role res-cheer" id="cheer">
+      <span class="role-icon"><svg class="ico"><use href="#i-trophy"/></svg></span>
+      <h2><span class="no">(1)</span>Varsity cheerleading</h2>
+      <p class="role-meta"><b>4 seasons, 2022 to 2026</b> &middot; University of Guelph &middot; Captain 2025&ndash;26</p>
+      <p>Second at nationals in my first season, then national champions in each of the next three, with a win on the road every year: Nashville twice, Virginia Beach, and Montreal. I captained the 2025&ndash;26 team of about 40 athletes.</p>
+      <div class="record-grid">
+        <figure class="figure">
+          <svg class="rec-fig" id="nats" role="img" aria-label="Finish at nationals: second in 2023, first in 2024, 2025 and 2026."></svg>
+          <figcaption><span>Fig. 2. Finish at nationals, by season.</span></figcaption>
+        </figure>
+        <figure class="figure">
+          <svg class="rec-fig" id="roadmap" role="img" aria-label="Map of wins away from Guelph: Nashville in 2023 and 2024, Virginia Beach in 2025, Montreal in 2026."></svg>
+          <figcaption><span>Fig. 3. Wins away from home, traced from Guelph.</span></figcaption>
+        </figure>
+      </div>
+      <figure class="figure tuck-fig">
+        <div class="t3-stage">
+          <canvas id="tuck" role="img" aria-label="My round-off into a double full, rebuilt in 3D from video and drawn as a person on the floor, with its centre-of-mass path. Drag sideways to look around."></canvas>
+          <div class="t3-hud" id="t3-hud" role="group" aria-label="Live values; choose one to plot"></div>
+        </div>
+        <div class="tvars" role="group" aria-label="Variable to plot">
+          <button class="chip" type="button" data-v="h" aria-pressed="true">Height</button>
+          <button class="chip" type="button" data-v="spd" aria-pressed="false">Speed</button>
+          <button class="chip" type="button" data-v="dist" aria-pressed="false">Distance</button>
+          <button class="chip" type="button" data-v="rot" aria-pressed="false">Flip</button>
+          <button class="chip" type="button" data-v="rotv" aria-pressed="false">Flip speed</button>
+          <button class="chip" type="button" data-v="tw" aria-pressed="false">Twist</button>
+          <button class="chip" type="button" data-v="twv" aria-pressed="false">Twist speed</button>
+        </div>
+        <canvas id="tgraph" role="img" aria-label="The chosen variable plotted against time through the run-in, round-off, double full and landing."></canvas>
+        <figcaption><span id="tuck-read">Fig. 4. My round-off into a double full, rebuilt in 3D from one 30 fps phone clip. A pose model found the joints, and I corrected every frame by hand, marking which side was nearer the camera and which points it couldn&rsquo;t see. The phone&rsquo;s pan, tilt, roll, zoom and drift come from the background and the floor lines. Every joint then sits on its line of sight from the phone, with fixed bone lengths and a torso that twists between hips and shoulders. In the air, the centre of mass has to follow a parabola with \(g = 9.81\) m/s&sup2; with the spin held steady. That gives 0.80 s in the air, a take-off at 3.4 m/s upward and a 0.60 m rise. Peak run-in speed is 7.4 m/s, and the whole pass covers 7.1 m. The double full is two full twists in the air, at up to about 1,390&deg;/s. Drag the scene sideways to look around. Choose a variable in the corner or above the graph, and hover over or drag across the graph to step through the frames.</span><button class="chip" type="button" id="tuck-speed">Play at real speed</button></figcaption>
+      </figure>
+      <ul class="chips"><li>3&times; national champion</li><li>4 road wins</li><li>Captain</li></ul>
+    </section>
+
+    <section class="block role res-swim" id="swim">
+      <span class="role-icon"><svg class="ico"><use href="#i-wave"/></svg></span>
+      <h2><span class="no">(2)</span>Varsity swimming</h2>
+      <p class="role-meta"><b>5 seasons, 2021 to 2026</b> &middot; Breaststroke &middot; Provincial championship team</p>
+      <p>Named to the provincial championship roster every season, swimming breaststroke.</p>
+      <dl class="stats">
+        <div><dt>50 m breaststroke, short course</dt><dd>29.88</dd></div>
+        <div><dt>100 m breaststroke, short course</dt><dd>1:05.79</dd></div>
+        <div><dt>Off my first-year 100</dt><dd>&minus;2.92 s</dd></div>
+      </dl>
+      <figure class="figure stroke-fig">
+        <canvas id="stroke" role="img" aria-label="A breaststroke cycle from the side: pull, breathe, kick and glide, with the swimmer's speed through the cycle plotted underneath."></canvas>
+        <figcaption><span id="stroke-read">Fig. 5. One breaststroke cycle. Speed peaks after the kick and nearly stalls while the legs recover.</span></figcaption>
+      </figure>
+      <div class="record-grid">
+        <figure class="figure">
+          <svg class="rec-fig" id="prog50" role="img" aria-label="50 metre breaststroke season bests, short course: not swum in 2021–22, 30.46 in 2022–23, 30.12 in 2023–24, 29.88 in 2024–25, 30.78 in 2025–26."></svg>
+        </figure>
+        <figure class="figure">
+          <svg class="rec-fig" id="prog100" role="img" aria-label="100 metre breaststroke season bests, short course: 1:08.71 in 2021–22, 1:07.31 in 2022–23, 1:07.70 in 2023–24, 1:05.79 in 2024–25, 1:08.57 in 2025–26."></svg>
+        </figure>
+      </div>
+      <p class="fig-hint"><span>Fig. 6. Season best by year, short course. Gold marks the best. Hover a point for the time.</span></p>
+      <figure class="figure race-fig">
+        <canvas id="race" role="img" aria-label="A 25 metre pool with two lanes: the first-year 100 metre breaststroke in 1:08.71 against the best, 1:05.79, swum at their average paces."></canvas>
+        <figcaption><span id="race-read">Fig. 7. The first-year 100 against the best 100, four times real speed. The clock shows real time.</span><button class="chip" type="button" id="race-again">Swim it again</button></figcaption>
+      </figure>
+    </section>
+
+    <nav class="pager" aria-label="Pages">
+      <a class="prev" href="education.html"><span>&larr; Previous</span><strong>Education</strong></a>
+      <a class="next" href="contact.html"><span>Next &rarr;</span><strong>Contact</strong></a>
+    </nav>
+  </main>
+
+  <footer class="foot">
+    <span>&copy; <span id="year">2026</span> Matthew Jackson</span>
+    <span>Press M for the site map</span>
+  </footer>
+
+  <script src="js/site.js?v=14"></script>
+  <script src="js/pathnav.js?v=11"></script>
+  <script src="js/icons.js?v=11"></script>
+  <script src="js/viz.js?v=11"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="js/tumble3d-data.js?v=12"></script>
+  <script src="js/tumble3d.js?v=12"></script>
+  <script src="js/results.js?v=12"></script>
+</body>
+</html>

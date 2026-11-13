@@ -1,0 +1,168 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Education | Matthew Jackson</title>
+  <meta name="description" content="A BSc in physics at Guelph, course by course: a term map of 60 courses and small live demos from physics, mathematics, economics, and biochemistry.">
+  <meta name="theme-color" content="#07222e">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%2307222e'/%3E%3Ccircle cx='16' cy='16' r='6' fill='%23ff6a55'/%3E%3C/svg%3E">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@700;800;900&family=Hanken+Grotesk:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"></script>
+  <script defer src="js/math.js?v=11"></script>
+  <link rel="stylesheet" href="css/site.css?v=17">
+</head>
+<body class="page-education" data-page="education">
+
+  <header class="nav">
+    <a class="brand" href="index.html"><span class="full">Matthew Jackson</span><span class="short">MJ</span></a>
+    <nav aria-label="Primary">
+      <a class="keep" href="projects.html">Projects</a>
+      <a href="experience.html">Experience</a>
+      <a href="education.html" aria-current="page">Education</a>
+      <a href="results.html">Results</a>
+      <a class="keep" href="contact.html">Contact</a>
+      <a class="keep" href="Resume.pdf">Resume</a>
+      <button class="keep map-open" type="button" hidden>Map</button>
+    </nav>
+  </header>
+
+  <main class="page">
+    <section id="overview">
+      <p class="kicker">BSc Honours Physics &middot; University of Guelph &middot; 2021 to 2026</p>
+      <h1 class="page-title">Education</h1>
+      <p class="lede">A physics major with minors in mathematics and economics, which started out in the life sciences. Sixty courses over five years, drawn below as a tree of prerequisites, and a few of them rebuilt further down as things that move as you scroll.</p>
+      <div class="cmap-legend" id="cmap-legend"></div>
+      <figure class="figure tree-fig">
+        <div class="tree-head" id="tree-head" aria-hidden="true"></div>
+        <div class="tree" id="tree"></div>
+        <div class="tree-read" id="tree-read" aria-live="polite"></div>
+        <figcaption>All sixty courses, one row per term, with a line from each course to the ones it was a prerequisite for (from the Guelph undergraduate calendar). The shaded streams show how many courses each subject had that term. Scroll down to grow it; hover or tap a course to trace its chain.</figcaption>
+      </figure>
+    </section>
+
+    <!-- ===== Physics ===== -->
+    <section class="block subj" id="physics" style="--c:#7cc4ff">
+      <h2><span class="no">(1)</span>Physics</h2>
+      <p>From physics for life sciences to quantum mechanics, electromagnetism, statistical physics, and solid state. Every course has its own demo: pick one.</p>
+
+      <figure class="figure demo" id="qm">
+        <p class="demo-course">PHYS 3230 &middot; Quantum Mechanics I</p>
+        <canvas id="qm-cv" role="img" aria-label="A quantum wave packet travelling toward a barrier; part reflects and part tunnels through."></canvas>
+        <div class="demo-controls">
+<div class="drive" id="qm-drive"><span class="k">Barrier height</span><span class="track"><i></i></span><output></output><span class="how">scroll</span></div>
+          <button class="chip" type="button" id="qm-go">Send another</button>
+        </div>
+        <figcaption><span id="qm-read">A wave packet meets a barrier. Scroll to raise it.</span></figcaption>
+      </figure>
+      <p class="demo-note">Classically, a particle with less energy than the barrier always bounces back. The wave function leaks through anyway: the time-dependent Schr&ouml;dinger equation, \(i\hbar\,\partial_t\psi = -\tfrac{\hbar^2}{2m}\partial_x^2\psi + V\psi\), solved live by the split-operator method (half a step of potential, a full step of kinetic energy in Fourier space, half a step of potential).</p>
+
+      <figure class="figure demo" id="field">
+        <p class="demo-course">PHYS 2330 &middot; Electricity and Magnetism I</p>
+        <canvas id="field-cv" role="img" aria-label="Electric field lines between point charges that you can drag."></canvas>
+        <div class="demo-controls">
+<div class="drive" id="field-drive"><span class="k">Second charge</span><span class="track"><i></i></span><output></output><span class="how">scroll</span></div>
+        </div>
+        <figcaption><span>Field lines of point charges. Scrolling turns the second charge from negative through zero to positive and back; your pointer carries a third one (click or tap to flip its sign).</span></figcaption>
+      </figure>
+      <p class="demo-note">Each line follows \(\mathbf E = \sum_i k q_i\,\hat{\mathbf r}_i / r_i^2\) out of the positive charges, and the number of lines leaving a charge is proportional to its size, so their crowding shows the field&rsquo;s strength (Gauss&rsquo;s law).</p>
+
+      <figure class="figure demo" id="gas">
+        <p class="demo-course">PHYS 2240 &middot; Thermal Physics</p>
+        <canvas id="gas-cv" role="img" aria-label="A box of gas particles colliding, and a histogram of their speeds settling onto the Maxwell–Boltzmann curve."></canvas>
+        <div class="demo-controls">
+<div class="drive" id="gas-drive"><span class="k">Piston</span><span class="track"><i></i></span><output></output><span class="how">scroll</span></div>
+          <button class="chip" type="button" id="gas-reset">Start them all at one speed</button>
+        </div>
+        <figcaption><span id="gas-read">Gas particles colliding. Scroll to push the piston in.</span></figcaption>
+      </figure>
+      <p class="demo-note">Nothing here is random except the starting directions, yet elastic collisions alone spread the speeds onto the Maxwell&ndash;Boltzmann distribution (in two dimensions, \(f(v) \propto v\,e^{-mv^2/2kT}\)), with the temperature set by the energy the particles started with. Pushing the piston in does work on the gas: particles bounce off the moving wall faster than they hit it, so the whole distribution heats up, and pulling it back out cools it again.</p>
+
+      <div class="also" data-subj="phys"></div>
+    </section>
+
+    <!-- ===== Mathematics ===== -->
+    <section class="block subj" id="math" style="--c:#c39bff">
+      <h2><span class="no">(2)</span>Mathematics and statistics</h2>
+      <p>Calculus through complex analysis and abstract algebra, with differential equations and numerical methods on the applied side. Every course has its own demo: pick one.</p>
+
+      <figure class="figure demo" id="linalg">
+        <p class="demo-course">MATH 1160 &middot; Linear Algebra I</p>
+        <canvas id="linalg-cv" role="img" aria-label="A 2 by 2 matrix transforming the plane; drag the two basis vectors."></canvas>
+        <div class="demo-controls">
+<div class="drive" id="linalg-drive"><span class="k">Matrix</span><span class="track"><i></i></span><output></output><span class="how">scroll</span></div>
+        </div>
+        <figcaption><span id="linalg-read">A matrix moves the whole grid.</span></figcaption>
+      </figure>
+      <p class="demo-note">Scrolling walks the matrix from the identity through a shear, a stretch, a rotation, and a reflection. Its columns (red and blue) are where the two basis vectors land, and your pointer is a vector \(\mathbf v\), with \(A\mathbf v\) in gold. The dashed lines are the eigenvectors, the directions the matrix only stretches, \(A\mathbf v = \lambda \mathbf v\). The shaded square&rsquo;s area is scaled by the determinant (and flipped when it turns negative).</p>
+
+      <figure class="figure demo" id="numerics">
+        <p class="demo-course">MATH 2130 &middot; Numerical Methods</p>
+        <canvas id="num-cv" role="img" aria-label="Phase plane of a spring: Euler's method spirals outward while fourth-order Runge–Kutta stays on the true circle."></canvas>
+        <div class="demo-controls">
+<div class="drive" id="num-drive"><span class="k">Step size</span><span class="track"><i></i></span><output></output><span class="how">scroll</span></div>
+        </div>
+        <figcaption><span id="num-read">Two solvers on the same spring.</span></figcaption>
+      </figure>
+      <p class="demo-note">A frictionless spring, \(\ddot x = -x\), should go round the same circle forever. Euler&rsquo;s method gains energy every step and spirals out; fourth-order Runge&ndash;Kutta, with error \(O(h^4)\) rather than \(O(h)\), stays on the circle even with large steps.</p>
+
+      <figure class="figure demo" id="clt">
+        <p class="demo-course">STAT 2040 &middot; Statistics I</p>
+        <canvas id="clt-cv" role="img" aria-label="The central limit theorem: averages of samples from a skewed distribution pile up into a bell curve."></canvas>
+        <div class="demo-controls">
+<div class="drive" id="clt-drive"><span class="k">Sample size</span><span class="track"><i></i></span><output></output><span class="how">scroll</span></div>
+        </div>
+        <figcaption><span id="clt-read">Averages of samples from a skewed distribution.</span></figcaption>
+      </figure>
+      <p class="demo-note">Each sample is drawn from the lopsided distribution on the left (an exponential). Their averages pile up on the right, and as the sample size grows the pile becomes the normal curve \(N(\mu, \sigma^2/n)\), whatever the shape you started from.</p>
+
+      <div class="also" data-subj="math"></div>
+    </section>
+
+    <!-- ===== Economics ===== -->
+    <section class="block subj" id="econ" style="--c:#ffd166">
+      <h2><span class="no">(3)</span>Economics and finance</h2>
+      <p>Micro and macro to the intermediate and advanced level, econometrics, game theory, and mathematical economics, plus finance and accounting. Every course has its own demo: pick one.</p>
+
+      <div class="also" data-subj="econ"></div>
+    </section>
+
+    <!-- ===== Bio & chem ===== -->
+    <section class="block subj" id="bio" style="--c:#5fd3b0">
+      <h2><span class="no">(4)</span>Biology and chemistry</h2>
+      <p>The first two years were life sciences: general chemistry, cell and molecular biology, genetics, biochemistry, physiology, and pharmacology. Every course has its own demo: pick one.</p>
+
+      <div class="also" data-subj="bio"></div>
+    </section>
+
+    <section class="block" id="beyond">
+      <h2><span class="no">(5)</span>Beyond the majors</h2>
+      <p>Programming and computing, and electives in psychology and linguistics, each with its own demo too.</p>
+      <div class="also" data-subj="cs,arts"></div>
+      <p class="muted">Now: a Master of Financial Economics at Western University. <a href="experience.html#mfe">More on the Experience page</a>.</p>
+    </section>
+
+    <nav class="pager" aria-label="Pages">
+      <a class="prev" href="experience.html"><span>&larr; Previous</span><strong>Experience</strong></a>
+      <a class="next" href="results.html"><span>Next &rarr;</span><strong>Results</strong></a>
+    </nav>
+  </main>
+
+  <footer class="foot">
+    <span>&copy; <span id="year">2026</span> Matthew Jackson</span>
+    <span>Press M for the site map</span>
+  </footer>
+
+  <script src="js/site.js?v=14"></script>
+  <script src="js/education.js?v=25"></script>
+  <script src="js/edu-physics.js?v=19"></script>
+  <script src="js/edu-math.js?v=20"></script>
+  <script src="js/edu-econ.js?v=21"></script>
+  <script src="js/edu-bio.js?v=26"></script>
+  <script src="js/edu-extra.js?v=25"></script>
+</body>
+</html>

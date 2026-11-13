@@ -1,0 +1,259 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Monte Carlo risk engine | Matthew Jackson</title>
+  <meta name="description" content="Correlated Monte Carlo simulation, VaR and CVaR, component VaR, correlation stress tests, and Kupiec backtesting, built from scratch in Python.">
+  <meta name="theme-color" content="#07222e">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%2307222e'/%3E%3Ccircle cx='16' cy='16' r='6' fill='%23ff6a55'/%3E%3C/svg%3E">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@700;800;900&family=Hanken+Grotesk:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"></script>
+  <script defer src="js/math.js?v=11"></script>
+  <link rel="stylesheet" href="css/site.css?v=14">
+</head>
+<body class="page-risk" data-page="risk">
+
+  <header class="nav">
+    <a class="brand" href="index.html"><span class="full">Matthew Jackson</span><span class="short">MJ</span></a>
+    <nav aria-label="Primary">
+      <a class="keep" href="projects.html" aria-current="page">Projects</a>
+      <a href="experience.html">Experience</a>
+      <a href="education.html">Education</a>
+      <a href="results.html">Results</a>
+      <a class="keep" href="contact.html">Contact</a>
+      <a class="keep" href="Resume.pdf">Resume</a>
+      <button class="keep map-open" type="button" hidden>Map</button>
+    </nav>
+  </header>
+
+  <main class="page">
+    <section id="overview">
+      <p class="kicker">Project 02 &middot; Risk</p>
+      <h1 class="page-title">Monte Carlo risk engine</h1>
+      <p class="lede">A portfolio risk system built from scratch: correlated return simulation through a hand-written Cholesky decomposition, VaR and CVaR by Monte Carlo and historical simulation, risk attribution by holding, correlation stress tests, and statistical backtesting.</p>
+      <div class="actions">
+        <a class="btn primary" href="https://github.com/mattjackson7/monte-carlo-risk-engine">Code on GitHub</a>
+      </div>
+      <figure class="figure">
+        <canvas id="fig-risk" role="img" aria-label="Histogram of simulated ten-day portfolio returns filling in as samples arrive, with the 95 and 99 percent VaR marked and the tail beyond the 99 percent VaR shaded."></canvas>
+        <div class="fig-controls" role="group" aria-label="Correlation regime">
+          <button class="chip" type="button" data-rho="0.2" aria-pressed="true">Calm, \(\rho = 0.2\)</button>
+          <button class="chip" type="button" data-rho="0.8" aria-pressed="false">Crisis, \(\rho = 0.8\)</button>
+        </div>
+        <figcaption>
+          <span>Fig. 1. Simulated 10-day returns of an equal-weight portfolio of four assets, generated through a Cholesky factor. The tail beyond the 99% VaR is shaded. Illustrative parameters.</span>
+          <span id="risk-read"></span>
+        </figcaption>
+      </figure>
+    </section>
+
+    <section class="block" id="sim">
+      <h2><span class="no">(1)</span>Correlated simulation</h2>
+      <div class="story" data-scene="cholesky">
+        <div class="stage"><canvas role="img" aria-label="Animated walk-through of building the covariance matrix, splitting it into volatilities and correlations, factoring it with Cholesky, and using the factor to correlate random draws."></canvas><p class="stage-cap"></p></div>
+        <div class="steps">
+          <div class="step">
+            <span class="step-no">1.1</span>
+            <h3>Returns to covariance</h3>
+            <p>Prices become daily log returns, \(r_t = \ln(P_t / P_{t-1})\). They add across days, so variance scales linearly with the horizon. Taking the sample covariance of four assets' returns, with Bessel's correction, gives \(\Sigma\): variances on the diagonal, covariances off it.</p>
+            <div class="eq">\[ \Sigma = \frac{1}{T-1} \sum_{t=1}^{T} (r_t - \bar r)(r_t - \bar r)^\top \]</div>
+            <p>Each term is an outer product: one day's deviation vector times its own transpose, a rank-one matrix. Averaging enough of them recovers the full covariance, which the figure does over ten simulated years.</p>
+          </div>
+          <div class="step">
+            <span class="step-no">1.2</span>
+            <h3>Split it apart</h3>
+            <p>\(\Sigma\) mixes two things: how much each asset moves, and how the assets move together. Pulling the volatilities out onto a diagonal matrix \(D\) leaves the correlation matrix \(\rho\), with ones on its diagonal. Watch the entries of \(\Sigma\) turn into correlations.</p>
+            <div class="eq">\[ \Sigma = D\,\rho\,D, \qquad D = \operatorname{diag}(\sigma_1, \dots, \sigma_n), \qquad \Sigma_{ij} = \sigma_i\,\rho_{ij}\,\sigma_j \]</div>
+            <p>This split comes back in the stress test.</p>
+          </div>
+          <div class="step">
+            <span class="step-no">1.3</span>
+            <h3>Factor it, column by column</h3>
+            <p>To simulate, \(\Sigma\) needs a square root. The Cholesky-Banachiewicz algorithm finds the lower-triangular \(L\) with \(LL^\top = \Sigma\), one column at a time: the diagonal entry first, then everything below it. Each entry only uses entries already found: a dot product of two partial rows of \(L\), taken off \(\Sigma_{ij}\), then divided by \(L_{jj}\) (or square-rooted on the diagonal). The figure works through each one. The engine implements this by hand rather than calling a library.</p>
+            <div class="eq">\[ \begin{aligned} L_{jj} &= \sqrt{\Sigma_{jj} - \textstyle\sum_{k&lt;j} L_{jk}^2} \\ L_{ij} &= \frac{1}{L_{jj}}\Big(\Sigma_{ij} - \textstyle\sum_{k&lt;j} L_{ik} L_{jk}\Big), \quad i > j \end{aligned} \]</div>
+          </div>
+          <div class="step">
+            <span class="step-no">1.4</span>
+            <h3>Check the factor</h3>
+            <p>Multiplying \(L\) by its transpose rebuilds \(\Sigma\). The difference is at machine precision, which is the engine's first built-in check. The residual on the left is computed live in your browser, in double precision.</p>
+            <div class="eq">\[ \big\lVert LL^\top - \Sigma \big\rVert_\infty \approx 10^{-15} \]</div>
+            <p>The algorithm costs \(O(n^3/3)\), about twice as fast as LU, because symmetry means only the lower triangle is computed.</p>
+          </div>
+          <div class="step">
+            <span class="step-no">1.5</span>
+            <h3>Correlate the noise</h3>
+            <p>Independent standard normals \(Z\) have no structure: a round cloud. Multiplying by \(L\) stretches and shears them into returns with exactly the target covariance, because \(\operatorname{Cov}(LZ) = L\,I\,L^\top = \Sigma\). Over an \(h\)-day horizon:</p>
+            <div class="eq">\[ X = \mu h + L Z \sqrt{h}, \qquad Z \sim \mathcal{N}(0, I) \]</div>
+            <p>Geometrically, \(L\) maps the unit circle of independent draws onto the covariance ellipse \(\{x : x^\top \Sigma^{-1} x = 1\}\), and each draw follows: the figure sends one \(z\) through \(L\) row by row.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="block" id="var">
+      <h2><span class="no">(2)</span>VaR and CVaR</h2>
+      <div class="story" data-scene="var">
+        <div class="stage"><canvas role="img" aria-label="A histogram of simulated portfolio returns building up, a quantile line sliding to the 1 percent level, and a marker moving into the tail to show the expected shortfall."></canvas><p class="stage-cap"></p></div>
+        <div class="steps">
+          <div class="step">
+            <span class="step-no">2.1</span>
+            <h3>Build the distribution</h3>
+            <p>Each simulated scenario gives one portfolio return, the weighted sum of its asset returns. Thousands of them build up the distribution of 10-day outcomes.</p>
+            <div class="eq">\[ R_p = w^\top X = \sum_i w_i X_i \]</div>
+          </div>
+          <div class="step">
+            <span class="step-no">2.2</span>
+            <h3>Value at risk</h3>
+            <p>VaR at confidence \(\alpha\) is the loss not exceeded with probability \(\alpha\). Slide down to the 1% quantile and read off the loss there.</p>
+            <div class="eq">\[ \operatorname{VaR}_\alpha = -Q_{1-\alpha}(R_p) = -F^{-1}(1-\alpha), \qquad F(x) = \mathbb{P}(R_p \le x) \]</div>
+            <p>A quantile is the cumulative distribution read backward: stack the histogram into \(F\), find where it reaches 1%, and drop down to the loss.</p>
+          </div>
+          <div class="step">
+            <span class="step-no">2.3</span>
+            <h3>Expected shortfall</h3>
+            <p>CVaR averages everything beyond that line, the tail's center of mass, so it measures how bad the tail gets, not just where it starts. It's a coherent risk measure. VaR isn't subadditive in general, so under VaR a diversified portfolio can look riskier than the sum of its parts.</p>
+            <div class="eq">\[ \operatorname{CVaR}_\alpha = -\,\mathbb{E}\big[\,R_p \mid R_p \le -\operatorname{VaR}_\alpha\big] \]</div>
+            <p>The engine computes both at 95% and 99%, by Monte Carlo and by historical simulation.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="block" id="component">
+      <h2><span class="no">(3)</span>Component VaR</h2>
+      <div class="story" data-scene="component">
+        <div class="stage"><canvas role="img" aria-label="Bars of standalone VaR for each asset overshooting the portfolio VaR, then sliding together into a stacked bar of component VaRs that sums exactly to it."></canvas><p class="stage-cap"></p></div>
+        <div class="steps">
+          <div class="step">
+            <span class="step-no">3.1</span>
+            <h3>Standalone risk overcounts</h3>
+            <p>Measured one at a time, each holding's VaR ignores how it offsets the others. Their sum overshoots the portfolio's VaR, and the gap is the diversification benefit.</p>
+          </div>
+          <div class="step">
+            <span class="step-no">3.2</span>
+            <h3>The gradient</h3>
+            <p>Under a normal model the decomposition has a closed form. Portfolio volatility is \(\sigma_p = \sqrt{w^\top \Sigma_h w}\) over the horizon, and its gradient is one matrix-vector product:</p>
+            <div class="eq">\[ \frac{\partial \sigma_p}{\partial w} = \frac{\Sigma_h w}{\sigma_p}, \qquad \operatorname{Component}_i = z_{\alpha}\, \frac{w_i\, (\Sigma_h w)_i}{\sigma_p} \]</div>
+            <p>The figure computes \(\Sigma_h w\) row by row, weights it by \(w\), and scales it into each holding's share of VaR.</p>
+          </div>
+          <div class="step">
+            <span class="step-no">3.3</span>
+            <h3>Euler decomposition</h3>
+            <p>The engine doesn't assume normality. It estimates marginal VaR from the simulation itself, at the VaR threshold, using a narrow band of \(\pm 0.5\%\,\sigma_p\) around the quantile:</p>
+            <div class="eq">\[ \begin{aligned} \operatorname{MVaR}_i &= \frac{\partial \operatorname{VaR}_p}{\partial w_i} = -\,\mathbb{E}\big[r_i \mid R_p = -\operatorname{VaR}_p\big] \\ \operatorname{CVaR}^{\text{comp}}_i &= w_i \operatorname{MVaR}_i, \qquad \textstyle\sum_i \operatorname{CVaR}^{\text{comp}}_i = \operatorname{VaR}_p \end{aligned} \]</div>
+            <p>Because VaR is positively homogeneous, Euler's theorem makes the components add up exactly. A position that hedges the portfolio shows a negative contribution.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="block" id="stress">
+      <h2><span class="no">(4)</span>Stress testing</h2>
+      <div class="story" data-scene="stress">
+        <div class="stage"><canvas role="img" aria-label="The correlation matrix's off-diagonal values rolling up to 0.8 while the volatilities stay fixed, then calm and crisis return clouds and their VaRs side by side."></canvas><p class="stage-cap"></p></div>
+        <div class="steps">
+          <div class="step">
+            <span class="step-no">4.1</span>
+            <h3>Two channels of risk</h3>
+            <p>Splitting the covariance into volatilities \(D\) and correlations \(\rho\) isolates the correlation channel. A stress test can change how the assets move together without touching how much each one moves.</p>
+            <div class="eq">\[ \Sigma_{\text{stress}} = D\,\rho_{\text{stress}}\,D \]</div>
+          </div>
+          <div class="step">
+            <span class="step-no">4.2</span>
+            <h3>Correlations converge</h3>
+            <p>In a crisis, assets that normally diversify each other start falling together. The crisis scenario sets every off-diagonal correlation to 0.8, the convergence seen in 2008 and in March 2020, while \(D\) stays exactly as it was.</p>
+            <div class="eq">\[ (\rho_{\text{stress}})_{ij} = 0.8 \quad (i \ne j) \]</div>
+          </div>
+          <div class="step">
+            <span class="step-no">4.3</span>
+            <h3>Rebuild the covariance</h3>
+            <p>Multiplying by a diagonal matrix on the left scales rows; on the right, it scales columns. So \(D\rho D\) multiplies each correlation by both assets' volatilities:</p>
+            <div class="eq">\[ (D \rho D)_{ij} = \sigma_i\, \rho_{ij}\, \sigma_j \]</div>
+            <p>Against the calm matrix, every variance on the diagonal is unchanged and every covariance off it is larger.</p>
+          </div>
+          <div class="step">
+            <span class="step-no">4.4</span>
+            <h3>Same volatilities, worse losses</h3>
+            <p>Every asset is exactly as volatile as before, but the cloud collapses toward a line, losses stop offsetting, and VaR rises. Here the starting point is the matrix estimated in section 1; the engine's own calm scenario uses \(\rho = 0.2\) off the diagonal, which the buttons on the figure at the top of the page run.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="block" id="backtest">
+      <h2><span class="no">(5)</span>Backtesting</h2>
+      <div class="story" data-scene="backtest">
+        <div class="stage"><canvas role="img" aria-label="A simulated daily return series with a rolling 99 percent VaR line, violations marked as they occur, and the Kupiec test statistic placed on the chi-squared distribution."></canvas><p class="stage-cap"></p></div>
+        <div class="steps">
+          <div class="step">
+            <span class="step-no">5.1</span>
+            <h3>Forecast, then wait</h3>
+            <p>Each day's VaR is forecast from the previous 252 days only, so nothing from the future leaks in. The window then rolls forward one day. In this simulated series volatility jumps partway through, and a rolling window is slow to catch up.</p>
+          </div>
+          <div class="step">
+            <span class="step-no">5.2</span>
+            <h3>Count the violations</h3>
+            <p>A violation is a day whose loss exceeds that morning's forecast. At 99%, about one day in a hundred should be one. Too many means the model understates risk; too few means it's too conservative.</p>
+            <div class="eq">\[ V = \sum_{t} \mathbf{1}\big\{ r_t < -\operatorname{VaR}_t \big\} \]</div>
+          </div>
+          <div class="step">
+            <span class="step-no">5.3</span>
+            <h3>The Kupiec test</h3>
+            <p>The proportion-of-failures test asks whether the violation rate \(\hat p = V/T\) is consistent with the target \(p = 1 - \alpha\). Under the null the statistic follows \(\chi^2\) with one degree of freedom:</p>
+            <div class="eq">\[ \operatorname{LR}_{\text{POF}} = -2 \ln\!\left[ \frac{p^{V} (1-p)^{T-V}}{\hat p^{V} (1-\hat p)^{T-V}} \right] \sim \chi^2_1 \]</div>
+            <p>The statistic is twice the gap in log-likelihood between the observed rate and the target. The figure measures that gap on the likelihood curve and lays it along the \(\chi^2_1\) axis:</p>
+            <div class="eq">\[ \ell(p) = V \ln p + (T - V)\ln(1-p), \qquad \operatorname{LR}_{\text{POF}} = 2\big[\ell(\hat p) - \ell(p)\big] \]</div>
+            <p>A p-value above 0.05 means the model isn't rejected. Basel III runs the same kind of test over 250 days.</p>
+            <p>Here it passes even though most violations bunch up after the jump. Kupiec counts violations but ignores when they happen; an independence test, such as Christoffersen's, is what catches clustering.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="block" id="checks">
+      <h2><span class="no">(6)</span>Checks</h2>
+      <p>Running <code>python risk_engine.py</code> executes five built-in checks:</p>
+      <ol>
+        <li>The Cholesky residual is about \(10^{-15}\), machine precision.</li>
+        <li>The simulated covariance converges to its target as the number of paths grows.</li>
+        <li>\(\operatorname{VaR}_{0.99} \ge \operatorname{VaR}_{0.95}\), and \(\operatorname{CVaR}_\alpha \ge \operatorname{VaR}_\alpha\) at every level.</li>
+        <li>The crisis scenario (\(\rho = 0.8\)) produces a higher VaR than the calm one (\(\rho = 0.2\)).</li>
+        <li>Component VaR sums to portfolio VaR to machine precision.</li>
+      </ol>
+    </section>
+
+    <section class="block" id="code">
+      <h2><span class="no">(7)</span>Code</h2>
+      <p>Python, NumPy, pandas, SciPy, yfinance, Streamlit, and Plotly. The dashboard has six tabs: overview, Monte Carlo simulation, VaR and CVaR, stress test, backtesting, and diagnostics (eigenspectrum, Cholesky factor, rolling volatility).</p>
+      <ul>
+        <li><code>risk_engine.py</code>: the core engine, in eight modules</li>
+        <li><code>data.py</code>: the market data pipeline, log returns, and covariance</li>
+        <li><code>app.py</code>: the Streamlit dashboard</li>
+      </ul>
+      <div class="links-row"><a href="https://github.com/mattjackson7/monte-carlo-risk-engine">Code on GitHub</a></div>
+    </section>
+
+    <nav class="pager" aria-label="Pages">
+      <a class="prev" href="options-pricing.html"><span>&larr; Previous</span><strong>Options pricing</strong></a>
+      <a class="next" href="portfolio-optimizer.html"><span>Next &rarr;</span><strong>Optimizer</strong></a>
+    </nav>
+  </main>
+
+  <footer class="foot">
+    <span>&copy; <span id="year">2026</span> Matthew Jackson</span>
+    <span>Press M for the site map</span>
+  </footer>
+
+  <script src="js/site.js?v=14"></script>
+  <script src="js/pathnav.js?v=11"></script>
+  <script src="js/risk.js?v=11"></script>
+  <script src="js/story.js?v=11"></script>
+  <script src="js/viz.js?v=11"></script>
+  <script src="js/risk-story.js?v=11"></script>
+</body>
+</html>

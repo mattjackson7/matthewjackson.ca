@@ -1,0 +1,257 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Options pricing &amp; volatility | Matthew Jackson</title>
+  <meta name="description" content="Black-Scholes-Merton and binomial tree pricers, analytical Greeks, and a Newton-Raphson implied volatility solver, built from first principles in Python.">
+  <meta name="theme-color" content="#07222e">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%2307222e'/%3E%3Ccircle cx='16' cy='16' r='6' fill='%23ff6a55'/%3E%3C/svg%3E">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@700;800;900&family=Hanken+Grotesk:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"></script>
+  <script defer src="js/math.js?v=11"></script>
+  <link rel="stylesheet" href="css/site.css?v=14">
+</head>
+<body class="page-options" data-page="options">
+
+  <header class="nav">
+    <a class="brand" href="index.html"><span class="full">Matthew Jackson</span><span class="short">MJ</span></a>
+    <nav aria-label="Primary">
+      <a class="keep" href="projects.html" aria-current="page">Projects</a>
+      <a href="experience.html">Experience</a>
+      <a href="education.html">Education</a>
+      <a href="results.html">Results</a>
+      <a class="keep" href="contact.html">Contact</a>
+      <a class="keep" href="Resume.pdf">Resume</a>
+      <button class="keep map-open" type="button" hidden>Map</button>
+    </nav>
+  </header>
+
+  <main class="page">
+    <section id="overview">
+      <p class="kicker">Project 01 &middot; Derivatives pricing</p>
+      <h1 class="page-title">Options pricing &amp; volatility</h1>
+      <p class="lede">Black-Scholes-Merton and Cox-Ross-Rubinstein pricers built from first principles, analytical Greeks, and a Newton-Raphson implied volatility solver that turns a live options chain into a volatility surface.</p>
+      <div class="actions">
+        <a class="btn primary" href="https://github.com/mattjackson7/options-pricing-dashboard">Code on GitHub</a>
+      </div>
+      <figure class="figure">
+        <canvas id="fig-options" role="img" aria-label="European call value against spot price under Black-Scholes-Merton, decaying toward its payoff as expiry approaches."></canvas>
+        <figcaption>
+          <span>Fig. 1. European call under BSM, \(K = 100\), decaying toward its payoff as expiry nears. Move across the figure to change spot; up and down changes volatility.</span>
+          <span id="opt-read"></span>
+        </figcaption>
+      </figure>
+    </section>
+
+    <section class="block" id="bsm">
+      <h2><span class="no">(1)</span>Black-Scholes-Merton</h2>
+      <div class="story" data-scene="bsm">
+        <div class="stage"><canvas role="img" aria-label="Simulated stock price paths fanning out into a lognormal distribution at expiry; the call payoff applied, averaged, and discounted into a price; then d1 and d2 on the standard normal curve and the Black-Scholes formula evaluated."></canvas><p class="stage-cap"></p></div>
+        <div class="steps">
+          <div class="step">
+            <span class="step-no">1.1</span>
+            <h3>Paths to a distribution</h3>
+            <p>The model assumes the underlying follows geometric Brownian motion, the same process drawn on the home page. Pricing happens under the risk-neutral measure, where the drift is the risk-free rate:</p>
+            <div class="eq">\[ dS_t = r S_t\, dt + \sigma S_t\, dW_t \quad\Longrightarrow\quad S_T = S_0\, e^{(r - \frac{1}{2}\sigma^2)T + \sigma\sqrt{T}\,Z} \]</div>
+            <p>Every path ends somewhere, and the endpoints pile up into a lognormal distribution.</p>
+          </div>
+          <div class="step">
+            <span class="step-no">1.2</span>
+            <h3>Payoff, average, discount</h3>
+            <p>A call pays \((S_T - K)^+\) at expiry: nothing for the paths that finish below the strike, the excess for the rest. Its price today is the risk-neutral expectation of that payoff, discounted at the risk-free rate:</p>
+            <div class="eq">\[ C = e^{-rT}\, \mathbb{E}^{\mathbb{Q}}\big[(S_T - K)^+\big] \]</div>
+            <p>Averaging the simulated payoffs and discounting gives a Monte Carlo price. The closed form does the same integral exactly.</p>
+          </div>
+          <div class="step">
+            <span class="step-no">1.3</span>
+            <h3>Hedge away the randomness</h3>
+            <p>Why is the price an expectation under the risk-free drift? Itô's lemma gives the change in an option's value \(V(S, t)\) when \(S\) follows GBM with any drift \(\mu\):</p>
+            <div class="eq">\[ dV = \Big(\frac{\partial V}{\partial t} + \mu S \frac{\partial V}{\partial S} + \tfrac{1}{2}\sigma^2 S^2 \frac{\partial^2 V}{\partial S^2}\Big)dt + \sigma S \frac{\partial V}{\partial S}\, dW \]</div>
+            <p>Hold the option and sell \(\Delta = \partial V/\partial S\) shares. The \(dW\) terms cancel, and so does \(\mu\):</p>
+            <div class="eq">\[ \Pi = V - \Delta S, \qquad d\Pi = \Big(\frac{\partial V}{\partial t} + \tfrac{1}{2}\sigma^2 S^2 \frac{\partial^2 V}{\partial S^2}\Big)dt \]</div>
+            <p>The figure runs it on one path that drifts at 8%, not 4%: the option alone swings by dollars while the hedged book barely moves. What's left is the cost of rebalancing only once a day, and it grows when the hedge is adjusted weekly.</p>
+          </div>
+          <div class="step">
+            <span class="step-no">1.4</span>
+            <h3>The Black-Scholes equation</h3>
+            <p>A riskless portfolio has to earn the risk-free rate, \(d\Pi = r\Pi\,dt\). Setting the two expressions equal gives the Black-Scholes partial differential equation:</p>
+            <div class="eq">\[ \frac{\partial V}{\partial t} + \tfrac{1}{2}\sigma^2 S^2 \frac{\partial^2 V}{\partial S^2} + rS\frac{\partial V}{\partial S} - rV = 0 \]</div>
+            <p>Each term has a meaning: time decay, the value of convexity in a moving market, growth at the risk-free rate, and the cost of financing the position. They cancel exactly at every point, which the waterfall checks as \(S\) sweeps across. The real-world drift never appears, which is why pricing can use \(r\) in its place.</p>
+          </div>
+          <div class="step">
+            <span class="step-no">1.5</span>
+            <h3>Solving it backward</h3>
+            <p>The payoff fixes the value at expiry, \(V(S, T) = (S - K)^+\), and the equation carries it back to today. In time to expiry \(\tau = T - t\) it's a diffusion, close cousin of the heat equation, so the payoff's sharp kink smooths out as \(\tau\) grows.</p>
+            <div class="eq">\[ \frac{\partial V}{\partial \tau} = \tfrac{1}{2}\sigma^2 S^2 \frac{\partial^2 V}{\partial S^2} + rS\frac{\partial V}{\partial S} - rV, \qquad V(S, 0) = (S - K)^+ \]</div>
+            <p>The figure solves it with Crank-Nicolson: on a grid in \(S\) and \(\tau\), each new value comes from three neighbours one step back, averaging an explicit and an implicit step, which leaves a tridiagonal system to solve at every step:</p>
+            <div class="eq">\[ \frac{V^{n+1}_i - V^{n}_i}{\Delta\tau} = \tfrac{1}{2}\big(\mathcal{L}V^{n+1}\big)_i + \tfrac{1}{2}\big(\mathcal{L}V^{n}\big)_i \]</div>
+          </div>
+          <div class="step">
+            <span class="step-no">1.6</span>
+            <h3>The closed form</h3>
+            <p>The equation can also be solved exactly. Its solution is the discounted risk-neutral expectation, and with \(S_T = S e^{(r - \sigma^2/2)T + \sigma\sqrt{T}Z}\) the payoff is positive exactly when \(Z > -d_2\). The integral splits in two:</p>
+            <div class="eq">\[ C = e^{-rT}\,\mathbb{E}\big[S_T\,\mathbf{1}_{Z > -d_2}\big] - K e^{-rT}\,\mathbb{P}(Z > -d_2) \]</div>
+            <p>The second piece is the strike times \(N(d_2)\), the risk-neutral probability of exercise. In the first, \(e^{-rT}S_T\,\varphi(z) = S\,\varphi(z - \sigma\sqrt{T})\): weighting by the stock price slides the bell curve right by \(\sigma\sqrt{T}\), and the same region's area becomes \(N(d_1)\).</p>
+            <div class="eq">\[ \begin{gathered} C = S e^{-qT} N(d_1) - K e^{-rT} N(d_2) \\[4pt] d_1 = \frac{\ln(S/K) + \big(r - q + \tfrac{1}{2}\sigma^2\big)T}{\sigma\sqrt{T}}, \qquad d_2 = d_1 - \sigma\sqrt{T} \end{gathered} \]</div>
+            <p>Puts follow from put-call parity, which the implementation satisfies to better than \(10^{-10}\).</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="block" id="tree">
+      <h2><span class="no">(2)</span>Binomial tree</h2>
+      <div class="story" data-scene="tree">
+        <div class="stage"><canvas role="img" aria-label="A five-step recombining binomial tree being built, put payoffs at expiry, values flowing backward to today for European and then American exercise with early-exercise nodes highlighted, and the tree price converging to Black-Scholes as the number of steps grows."></canvas><p class="stage-cap"></p></div>
+        <div class="steps">
+          <div class="step">
+            <span class="step-no">2.1</span>
+            <h3>Build the lattice</h3>
+            <p>The Cox-Ross-Rubinstein tree splits the time to expiry into \(N\) steps of \(\Delta t = T/N\). At each step the price moves up by \(u\) or down by \(d\), with risk-neutral probability \(p\) of an up move:</p>
+            <div class="eq">\[ u = e^{\sigma\sqrt{\Delta t}}, \qquad d = \frac{1}{u}, \qquad p = \frac{e^{(r-q)\Delta t} - d}{u - d} \]</div>
+            <p>Because \(ud = 1\) the tree recombines, leaving \(N + 1\) terminal prices instead of \(2^N\).</p>
+          </div>
+          <div class="step">
+            <span class="step-no">2.2</span>
+            <h3>Payoffs at expiry</h3>
+            <p>At the last step the option's value is known exactly. For a put, it's the intrinsic value at each terminal price:</p>
+            <div class="eq">\[ V_{N,j} = \max\big(K - S_0\, u^{j} d^{N-j},\; 0\big) \]</div>
+          </div>
+          <div class="step">
+            <span class="step-no">2.3</span>
+            <h3>Backward induction</h3>
+            <p>Each earlier node is worth the discounted expectation of its two children, so values flow back through the tree to today:</p>
+            <div class="eq">\[ V_{n,j} = e^{-r\Delta t}\big[\,p\, V_{n+1,\,j+1} + (1-p)\, V_{n+1,\,j}\,\big] \]</div>
+          </div>
+          <div class="step">
+            <span class="step-no">2.4</span>
+            <h3>Early exercise</h3>
+            <p>An American option can be exercised at any node, so each node takes whichever is worth more, holding on or exercising now:</p>
+            <div class="eq">\[ V_{n,j} = \max\Big(e^{-r\Delta t}\big[p\, V_{n+1,\,j+1} + (1-p)\, V_{n+1,\,j}\big],\; K - S_{n,j}\Big) \]</div>
+            <p>The highlighted nodes are where exercising wins: deep in the money, where the interest on the strike is worth more than the option's remaining time value. On the engine's at-the-money benchmark the early-exercise premium is about $0.52.</p>
+          </div>
+          <div class="step">
+            <span class="step-no">2.5</span>
+            <h3>Convergence</h3>
+            <p>As \(N\) grows the tree converges to the Black-Scholes price, zigzagging as the strike falls between terminal nodes. The error shrinks like \(1/N\); on the engine's own benchmark it's under \(10^{-2}\) at \(N = 200\).</p>
+            <div class="eq">\[ \big|\,V^{\text{tree}}_N - V^{\text{BSM}}\big| = O(1/N) \]</div>
+            <p class="muted">The page navigator is drawn as one of these trees. Each section is a node, and the path through it is one possible price path.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="block" id="greeks">
+      <h2><span class="no">(3)</span>Greeks</h2>
+      <div class="story" data-scene="greeks">
+        <div class="stage"><canvas role="img" aria-label="A tangent line sweeping the call price curve while delta is traced below; delta steepening and gamma sharpening as expiry approaches; and a finite-difference secant closing on the tangent, with the error plotted against the step size."></canvas><p class="stage-cap"></p></div>
+        <div class="steps">
+          <div class="step">
+            <span class="step-no">3.1</span>
+            <h3>Delta is a slope</h3>
+            <p>Each Greek is a derivative of the price. Delta is the slope of the price against the spot, the number of shares that hedges one option:</p>
+            <div class="eq">\[ \Delta = \frac{\partial C}{\partial S} = e^{-qT} N(d_1) \]</div>
+          </div>
+          <div class="step">
+            <span class="step-no">3.2</span>
+            <h3>Gamma is curvature</h3>
+            <p>Gamma is how fast delta changes. It peaks at the money and sharpens as expiry approaches, when the option is about to become either worthless or a share:</p>
+            <div class="eq">\[ \Gamma = \frac{\partial^2 C}{\partial S^2} = \frac{e^{-qT} N'(d_1)}{S\sigma\sqrt{T}} \]</div>
+            <div class="table-wrap">
+              <table class="data">
+                <thead><tr><th scope="col">Greek</th><th scope="col">Definition</th><th scope="col">What it measures</th></tr></thead>
+                <tbody>
+                  <tr><th scope="row">Delta \(\Delta\)</th><td>\(\partial V/\partial S\)</td><td>The hedge ratio</td></tr>
+                  <tr><th scope="row">Gamma \(\Gamma\)</th><td>\(\partial^2 V/\partial S^2\)</td><td>How fast delta changes</td></tr>
+                  <tr><th scope="row">Vega \(\nu\)</th><td>\(\partial V/\partial \sigma\)</td><td>Sensitivity to volatility</td></tr>
+                  <tr><th scope="row">Theta \(\Theta\)</th><td>\(\partial V/\partial t\)</td><td>Time decay</td></tr>
+                  <tr><th scope="row">Rho \(\rho\)</th><td>\(\partial V/\partial r\)</td><td>Interest rate sensitivity</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+          <div class="step">
+            <span class="step-no">3.3</span>
+            <h3>Checking with finite differences</h3>
+            <p>All five Greeks are computed analytically and checked against central finite differences. As the step \(h\) shrinks the secant closes on the tangent and the error falls like \(h^2\), until floating-point rounding takes over and it climbs again:</p>
+            <div class="eq">\[ \Delta \approx \frac{C(S+h) - C(S-h)}{2h}, \qquad \text{error} \approx \underbrace{\tfrac{h^2}{6}\,C'''}_{\text{truncation}} + \underbrace{\tfrac{\varepsilon\, C}{h}}_{\text{rounding}} \]</div>
+            <p>The engine's analytical and numerical Greeks agree to better than \(10^{-7}\).</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="block" id="iv">
+      <h2><span class="no">(4)</span>Implied volatility</h2>
+      <div class="story" data-scene="iv">
+        <div class="stage"><canvas role="img" aria-label="The call price as a function of volatility crossing the market price at the implied volatility; Newton-Raphson iterations sliding down tangent lines with errors shrinking quadratically; then a volatility smile and a rotating implied volatility surface."></canvas><p class="stage-cap"></p></div>
+        <div class="steps">
+          <div class="step">
+            <span class="step-no">4.1</span>
+            <h3>Inverting the price</h3>
+            <p>The BSM price rises monotonically with \(\sigma\), so for any market price there is exactly one volatility that reproduces it. That volatility is the implied volatility:</p>
+            <div class="eq">\[ \operatorname{BSM}(\sigma^{*}) = C_{\text{mkt}} \]</div>
+          </div>
+          <div class="step">
+            <span class="step-no">4.2</span>
+            <h3>Newton-Raphson</h3>
+            <p>Newton's method follows the tangent of the price curve down to the market price. Vega is that tangent's slope, so each step is one division:</p>
+            <div class="eq">\[ \sigma_{n+1} = \sigma_n - \frac{\operatorname{BSM}(\sigma_n) - C_{\text{mkt}}}{\nu(\sigma_n)} \]</div>
+            <p>Convergence is quadratic: the number of correct digits roughly doubles each step, typically reaching machine precision in 5 to 10 iterations. A bisection fallback handles contracts with near-zero vega, and the solver is vectorized with NumPy broadcasting across whole chains.</p>
+          </div>
+          <div class="step">
+            <span class="step-no">4.3</span>
+            <h3>The smile and the surface</h3>
+            <p>Live chains come from yfinance, filtered for liquidity and priced at the bid-ask midpoint, and every contract is inverted. Under BSM the result would be flat across strikes. It isn't: equity index options such as SPY show a pronounced skew, with lower strikes carrying higher implied volatility, which reflects demand for downside protection.</p>
+            <p>Across expiries the smiles form a surface, which the dashboard draws in 3D. The figure's market is synthetic, but each point on it is a real Newton inversion.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="block" id="results">
+      <h2><span class="no">(5)</span>Results</h2>
+      <dl class="facts">
+        <div><dt>Live SPY chain</dt><dd>&lt; 4 s<small>3,800+ contracts across 32 expiries, fetched and IV-solved</small></dd></div>
+        <div><dt>Put-call parity</dt><dd>\(&lt; 10^{-10}\)<small>Holds to machine precision</small></dd></div>
+        <div><dt>Greeks vs finite differences</dt><dd>\(&lt; 10^{-7}\)<small>All five, analytical against numerical</small></dd></div>
+        <div><dt>IV round trip</dt><dd>\(&lt; 10^{-8}\)<small>Recovery error across all strikes and volatility levels</small></dd></div>
+      </dl>
+    </section>
+
+    <section class="block" id="code">
+      <h2><span class="no">(6)</span>Code</h2>
+      <p>Python, NumPy, SciPy, pandas, yfinance, Streamlit, and Plotly. The dashboard has two tabs: a pricer with all five Greeks plotted against spot and time to expiry, and a market data tab that fetches a ticker's chain and draws its implied volatility surface.</p>
+      <ul>
+        <li><code>options_pricer.py</code>: BSM, Greeks, the binomial tree, and the IV solver, scalar and vectorized</li>
+        <li><code>data.py</code>: the yfinance pipeline, liquidity filtering, and surface construction</li>
+        <li><code>app.py</code>: the Streamlit dashboard</li>
+      </ul>
+      <p class="muted">Next: Heston stochastic volatility to fit the surface, Dupire local volatility, delta-hedging P&amp;L attribution, and a strategy builder.</p>
+      <div class="links-row"><a href="https://github.com/mattjackson7/options-pricing-dashboard">Code on GitHub</a></div>
+    </section>
+
+    <nav class="pager" aria-label="Pages">
+      <a class="prev" href="projects.html"><span>&larr; Previous</span><strong>All projects</strong></a>
+      <a class="next" href="risk-engine.html"><span>Next &rarr;</span><strong>Risk engine</strong></a>
+    </nav>
+  </main>
+
+  <footer class="foot">
+    <span>&copy; <span id="year">2026</span> Matthew Jackson</span>
+    <span>Press M for the site map</span>
+  </footer>
+
+  <script src="js/site.js?v=14"></script>
+  <script src="js/pathnav.js?v=11"></script>
+  <script src="js/options.js?v=11"></script>
+  <script src="js/story.js?v=11"></script>
+  <script src="js/viz.js?v=11"></script>
+  <script src="js/options-story.js?v=11"></script>
+</body>
+</html>

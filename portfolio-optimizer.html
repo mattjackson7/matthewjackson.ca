@@ -1,0 +1,266 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Return forecasting &amp; optimization | Matthew Jackson</title>
+  <meta name="description" content="A Temporal Fusion Transformer forecasting multi-asset returns, feeding mean-variance optimization with shrinkage covariance and a benchmarked backtest.">
+  <meta name="theme-color" content="#07222e">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%2307222e'/%3E%3Ccircle cx='16' cy='16' r='6' fill='%23ff6a55'/%3E%3C/svg%3E">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@700;800;900&family=Hanken+Grotesk:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"></script>
+  <script defer src="js/math.js?v=11"></script>
+  <link rel="stylesheet" href="css/site.css?v=14">
+</head>
+<body class="page-optimizer" data-page="optimizer">
+
+  <header class="nav">
+    <a class="brand" href="index.html"><span class="full">Matthew Jackson</span><span class="short">MJ</span></a>
+    <nav aria-label="Primary">
+      <a class="keep" href="projects.html" aria-current="page">Projects</a>
+      <a href="experience.html">Experience</a>
+      <a href="education.html">Education</a>
+      <a href="results.html">Results</a>
+      <a class="keep" href="contact.html">Contact</a>
+      <a class="keep" href="Resume.pdf">Resume</a>
+      <button class="keep map-open" type="button" hidden>Map</button>
+    </nav>
+  </header>
+
+  <main class="page">
+    <section id="overview">
+      <p class="kicker">Project 03 &middot; Forecasting and allocation</p>
+      <h1 class="page-title">Return forecasting &amp; optimization</h1>
+      <p class="lede">A Temporal Fusion Transformer forecasts the distribution of five-day returns across a set of assets. Those forecasts drive mean-variance optimization with shrinkage covariance, and the resulting portfolios are backtested against simple benchmarks in a six-tab dashboard.</p>
+      <div class="actions">
+        <a class="btn primary" href="https://github.com/mattjackson7/tft-portfolio-optimizer">Code on GitHub</a>
+      </div>
+      <figure class="figure">
+        <canvas id="fig-opt" role="img" aria-label="Scatter of random long-only portfolios in risk and return, the mean-variance efficient frontier, the capital market line, and the tangency portfolio."></canvas>
+        <figcaption>
+          <span>Fig. 1. Random long-only portfolios of five assets, the mean-variance frontier (shorting allowed), and the tangency portfolio for \(r_f = 2\%\). Move across the figure to read the weights along the frontier. Illustrative data.</span>
+          <span id="opt-read"></span>
+        </figcaption>
+      </figure>
+    </section>
+
+    <!-- one continuous story, from raw prices to weights: js/optimizer-story.js -->
+    <div class="story story-long" data-scene="pipeline">
+      <div class="stage"><canvas role="img" aria-label="Animated walk-through of the pipeline: prices become features and a tensor; inside the Temporal Fusion Transformer, embeddings pass through gated residual networks, variable selection, an LSTM, attention, and a quantile head; the forecasts become the expected-return vector; the covariance is shrunk; and the weights are optimized."></canvas><p class="stage-cap"></p></div>
+      <div class="steps">
+
+        <section class="chapter" id="features">
+          <h2><span class="no">(1)</span>Features</h2>
+          <div class="step">
+            <span class="step-no">1.1</span>
+            <h3>Raw prices</h3>
+            <p>Everything starts from daily prices for a ticker universe the user chooses, fetched live with yfinance. Here there are four illustrative assets, the same EQ, CR, CM, and RE as on the risk engine page, and the figure follows them all the way to portfolio weights.</p>
+          </div>
+          <div class="step">
+            <span class="step-no">1.2</span>
+            <h3>Five features per asset</h3>
+            <p>Each price series becomes five engineered features: <strong>log returns</strong>, which add across days; <strong>RSI</strong> with Wilder's smoothing at \(\alpha = 1/14\), overbought above 70 and oversold below 30; the <strong>MACD signal line</strong>, smoother than raw MACD as an input; annualized <strong>rolling volatility</strong>, for the local regime; and <strong>normalized volume</strong>, which keeps relative spikes and drops the level differences between assets.</p>
+          </div>
+          <div class="step">
+            <span class="step-no">1.3</span>
+            <h3>A tensor</h3>
+            <p>Standardized and stacked, the features form a tensor: assets &times; features &times; time. The model reads a 60-day window of it, along with static covariates (which asset this is, as a learned embedding) and inputs known in advance, such as the time index.</p>
+          </div>
+        </section>
+
+        <section class="chapter" id="forecast">
+          <h2><span class="no">(2)</span>Forecasting</h2>
+          <div class="step">
+            <span class="step-no">2.1</span>
+            <h3>Embed each input</h3>
+            <p>The forecaster is a Temporal Fusion Transformer (Lim et al., 2020). It starts by turning each of today's feature values into a vector, with a learned linear map per feature:</p>
+            <div class="eq">\[ e^{(k)}_t = x^{(k)}_t\, w^{(k)} + b^{(k)} \]</div>
+            <p>The real model uses 32 to 64 dimensions. The figure uses 4 so every number fits, and its weights are random stand-ins for trained ones, but every operation from here on is computed exactly.</p>
+          </div>
+          <div class="step">
+            <span class="step-no">2.2</span>
+            <h3>Gated residual network: the dense layer</h3>
+            <p>The gated residual network (GRN) is the TFT's building block. Its first layer takes the input \(a\) together with a context vector \(c\), here the asset's static embedding, and applies an ELU nonlinearity:</p>
+            <div class="eq">\[ \begin{gathered} \eta_2 = \operatorname{ELU}\!\big(W_2 a + W_3 c + b_2\big) \\ \operatorname{ELU}(z) = \begin{cases} z & z > 0 \\ e^{z} - 1 & z \le 0 \end{cases} \end{gathered} \]</div>
+            <p>Stacking \(a\) and \(c\) turns the two products into one: \([W_2\;W_3]\) times \([a;\,c]\).</p>
+          </div>
+          <div class="step">
+            <span class="step-no">2.3</span>
+            <h3>The gate</h3>
+            <p>A second layer doubles the width, and the result splits in half. One half is squashed by a sigmoid into gates between 0 and 1, and the gates scale the other half element by element. This gated linear unit (GLU) lets the network switch a whole branch off when it doesn't help.</p>
+            <div class="eq">\[ \eta_1 = W_1 \eta_2 + b_1 = \begin{bmatrix} \gamma_1 \\ \gamma_2 \end{bmatrix}, \qquad \operatorname{GLU}(\eta_1) = \gamma_1 \odot \sigma(\gamma_2) \]</div>
+          </div>
+          <div class="step">
+            <span class="step-no">2.4</span>
+            <h3>Skip connection and LayerNorm</h3>
+            <p>The input is added back, so the block learns a correction to \(a\) rather than a replacement, and LayerNorm rescales the result to mean 0 and standard deviation 1 across its entries:</p>
+            <div class="eq">\[ \begin{aligned} \operatorname{GRN}(a, c) &= \operatorname{LayerNorm}\!\big(a + \operatorname{GLU}(\eta_1)\big) \\ \operatorname{LayerNorm}(s) &= g \odot \frac{s - \bar s}{\sigma_s} + \beta \end{aligned} \]</div>
+            <p>The learned gain \(g\) and shift \(\beta\) start at 1 and 0, as in the figure.</p>
+          </div>
+          <div class="step">
+            <span class="step-no">2.5</span>
+            <h3>Variable selection</h3>
+            <p>Every feature gets its own GRN. A separate GRN scores the features, and a softmax turns the scores into weights that are positive and sum to one. The weighted sum is the day's input to the sequence model, and the weights themselves show which features the model leaned on.</p>
+            <div class="eq">\[ \begin{gathered} v = \operatorname{softmax}(z), \qquad v_k = \frac{e^{z_k}}{\sum_j e^{z_j}} \\ \xi_t = \sum_k v_k\, \operatorname{GRN}_k\big(e^{(k)}_t\big) \end{gathered} \]</div>
+          </div>
+          <div class="step">
+            <span class="step-no">2.6</span>
+            <h3>LSTM encoder</h3>
+            <p>An LSTM encoder-decoder reads the 60-day sequence of these vectors, initialized from the static context. At each day, gates decide how much of the running cell state to forget, how much new information to write, and how much to expose as the hidden state:</p>
+            <div class="eq">\[ \begin{aligned} f_t,\; i_t,\; o_t &= \sigma\big(W_{f,i,o}\,[h_{t-1}, \xi_t] + b_{f,i,o}\big) \\ c_t &= f_t \odot c_{t-1} + i_t \odot \tanh\big(W_c\,[h_{t-1}, \xi_t] + b_c\big) \\ h_t &= o_t \odot \tanh(c_t) \end{aligned} \]</div>
+            <p>The figure runs a one-unit LSTM over the window for real, so its gate readings are genuine.</p>
+          </div>
+          <div class="step">
+            <span class="step-no">2.7</span>
+            <h3>Attention</h3>
+            <p>Each forecast day issues a query, every past day offers a key, and their scaled dot products become scores. A softmax over the scores gives attention weights, and the output is the weighted sum of the past days' values:</p>
+            <div class="eq">\[ \operatorname{Attention}(Q, K, V) = \operatorname{softmax}\!\left(\frac{QK^\top}{\sqrt{d}}\right) V \]</div>
+            <p>The TFT's version shares the values across heads, so the averaged weights can be read directly as which past days each forecast relied on. The pattern in the figure is illustrative.</p>
+          </div>
+          <div class="step">
+            <span class="step-no">2.8</span>
+            <h3>The quantile head</h3>
+            <p>The final layer outputs three numbers for each of the next five days: the 10th, 50th, and 90th percentiles. Training minimizes the pinball loss, which charges under-forecasts at rate \(q\) and over-forecasts at rate \(1-q\), so each output settles on its own quantile:</p>
+            <div class="eq">\[ \rho_q(u) = \max\big(q\,u,\; (q-1)\,u\big), \qquad u = y - \hat y \]</div>
+            <p>At \(q = 0.5\) that's mean absolute error, and the 10% to 90% band should hold about 80% of outcomes.</p>
+          </div>
+          <div class="step">
+            <span class="step-no">2.9</span>
+            <h3>Quantiles become <span class="nt">\(\mu\)</span></h3>
+            <p>The optimizer needs one expected return per asset. The code takes the median forecasts for the five days ahead and adds them up, because log returns add across days:</p>
+            <div class="eq">\[ \mu_i = \sum_{h=1}^{5} \hat q_{0.5}^{(i)}(h) \]</div>
+            <p>The figure then annualizes, multiplying by 252/5, to put \(\mu\) on the same scale as the annual covariance it uses. The band around the median is far wider than the median is far from zero: return forecasts are noisy, which is why the next step damps the noise in the risk estimate.</p>
+          </div>
+        </section>
+
+        <section class="chapter" id="covariance">
+          <h2><span class="no">(3)</span>Covariance</h2>
+          <div class="step">
+            <span class="step-no">3.1</span>
+            <h3>Sample covariance</h3>
+            <p>The optimizer also needs risk: the sample covariance \(S\) of the assets' returns, re-estimated from the previous 252 days at each rebalance.</p>
+          </div>
+          <div class="step">
+            <span class="step-no">3.2</span>
+            <h3>Shrinkage</h3>
+            <p>With few observations per asset, \(S\) is noisy, especially off the diagonal, and an optimizer will happily exploit that noise. Linear shrinkage toward the diagonal keeps every asset's variance and pulls each covariance in by \(\alpha\):</p>
+            <div class="eq">\[ \hat\Sigma = (1-\alpha)\,S + \alpha \operatorname{diag}(S), \qquad \alpha = 0.1 \]</div>
+            <p>It's Ledoit-Wolf-style shrinkage with a fixed intensity.</p>
+          </div>
+        </section>
+
+        <section class="chapter" id="optimize">
+          <h2><span class="no">(4)</span>Optimization</h2>
+          <div class="step">
+            <span class="step-no">4.1</span>
+            <h3><span class="nt">\(\hat\Sigma w\)</span>, row by row</h3>
+            <p>Every portfolio statistic is matrix arithmetic. Start from equal weights. Multiplying \(\hat\Sigma\) by \(w\) takes each row against the weight vector: the vector turns to lie along the row, the pairs multiply, and the products add into one entry of \(\hat\Sigma w\).</p>
+            <div class="eq">\[ (\hat\Sigma w)_i = \sum_k \hat\Sigma_{ik}\, w_k \]</div>
+          </div>
+          <div class="step">
+            <span class="step-no">4.2</span>
+            <h3>Risk, return, Sharpe</h3>
+            <p>Then \(w^\top(\hat\Sigma w)\) is the portfolio variance and \(w^\top\mu\) its expected return. With the risk-free rate they give the Sharpe ratio, the quantity being maximized:</p>
+            <div class="eq">\[ \operatorname{SR}(w) = \frac{w^\top \mu - r_f}{\sqrt{w^\top \hat\Sigma\, w}} \]</div>
+          </div>
+          <div class="step">
+            <span class="step-no">4.3</span>
+            <h3>Climb to the top</h3>
+            <p>The engine solves this with SLSQP under the long-only constraints \(\sum_i w_i = 1\) and \(w_i \ge 0\). The figure solves the same problem the simplest way: step along the gradient of the Sharpe ratio, then project back onto the allowed weights. The arrow is the direction of the next step, and it turns as the climb levels out.</p>
+            <div class="eq">\[ \begin{aligned} \nabla \operatorname{SR}(w) &= \frac{\mu - r_f \mathbf{1}}{\sigma_p} - \frac{(w^\top\mu - r_f)\,\hat\Sigma w}{\sigma_p^{3}} \\ w &\leftarrow \Pi_{\Delta}\big(w + \eta\, \nabla \operatorname{SR}(w)\big) \end{aligned} \]</div>
+          </div>
+          <div class="step">
+            <span class="step-no">4.4</span>
+            <h3>Weights out</h3>
+            <p>The result is the max-Sharpe weight vector, held for the next five trading days in the backtest. Minimizing variance at each target return instead, across 80 targets, traces the efficient frontier at the top of the page.</p>
+          </div>
+        </section>
+
+      </div>
+    </div>
+
+    <section class="block" id="backtest">
+      <h2><span class="no">(5)</span>Backtest</h2>
+      <div class="story" data-scene="backtest-wf">
+        <div class="stage"><canvas role="img" aria-label="A walk-forward backtest on simulated assets: a rolling estimation window with the weights re-solved every five days, wealth curves against equal-weight and buy-and-hold, drawdowns and performance metrics, and a diagram of look-ahead bias and its fix."></canvas><p class="stage-cap"></p></div>
+        <div class="steps">
+          <div class="step">
+            <span class="step-no">5.1</span>
+            <h3>Walk forward</h3>
+            <p>Portfolios are rebalanced every five trading days. At each rebalance date \(t\), the covariance is re-estimated from the previous 252 days, the forecasts give \(\mu\), and the weights are re-solved:</p>
+            <div class="eq">\[ \hat\Sigma_t = \operatorname{shrink}\big(\operatorname{Cov}(r_{t-252}, \dots, r_{t-1})\big), \qquad w_t = \arg\max_{w \in \Delta} \operatorname{SR}(w;\, \mu_t, \hat\Sigma_t) \]</div>
+            <p>The figure runs that loop for real on simulated assets, with a trailing average standing in for the TFT forecast, so you can watch the weights shift as the market moves.</p>
+          </div>
+          <div class="step">
+            <span class="step-no">5.2</span>
+            <h3>Hold, then compound</h3>
+            <p>Each set of weights is held for the next five days, and the realized returns compound into a wealth curve. The same days, run through an equal-weight portfolio and a buy-and-hold portfolio, give the benchmarks:</p>
+            <div class="eq">\[ W_T = \prod_{t=1}^{T} \big(1 + w_{\tau(t)}^\top R_t\big) \]</div>
+            <p>Here \(\tau(t)\) is the most recent rebalance date on or before day \(t\).</p>
+          </div>
+          <div class="step">
+            <span class="step-no">5.3</span>
+            <h3>Drawdowns and metrics</h3>
+            <p>The dashboard reports six statistics for the strategy and both benchmarks:</p>
+      <div class="table-wrap">
+              <table class="data">
+                <thead><tr><th scope="col">Metric</th><th scope="col">Definition</th></tr></thead>
+                <tbody>
+                  <tr><th scope="row">Annual return</th><td>\(\big(\prod_t (1 + r_t)\big)^{252/T} - 1\)</td></tr>
+                  <tr><th scope="row">Annual volatility</th><td>\(\operatorname{std}(r)\,\sqrt{252}\)</td></tr>
+                  <tr><th scope="row">Sharpe</th><td>\(\bar r_{\text{excess}} / \sigma \cdot \sqrt{252}\)</td></tr>
+                  <tr><th scope="row">Sortino</th><td>\(R_{\text{annual}} / \sigma_{\text{downside}}\)</td></tr>
+                  <tr><th scope="row">Max drawdown</th><td>\(\max_t\, (V_{\text{peak}} - V_t) / V_{\text{peak}}\)</td></tr>
+                  <tr><th scope="row">Calmar</th><td>\(R_{\text{annual}} / \lvert \text{MDD} \rvert\)</td></tr>
+                </tbody>
+              </table>
+            </div>
+            <p>The diagnostics tab adds attention heatmaps, variable importance, rolling prediction error, per-asset MAE, and the covariance eigenspectrum.</p>
+          </div>
+          <div class="step">
+            <span class="step-no">5.4</span>
+            <h3>The look-ahead trap</h3>
+            <p>A backtest is only honest if every decision uses information available at the time. Right now the model forecasts once for the test window, and that forecast is reused at every rebalance, including dates before it was made. Re-predicting at each step, using only the days to its left, is the next change, and the README lists it as the first extension.</p>
+            <p class="todo">[Add the out-of-sample Sharpe ratio next to the equal-weight benchmark once re-prediction is in]</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="block" id="code">
+      <h2><span class="no">(6)</span>Code</h2>
+      <p>Python, PyTorch with PyTorch Forecasting, NumPy, SciPy, yfinance, Streamlit, and Plotly. Built-in checks confirm the quantiles stay ordered, the covariance is symmetric positive definite, and the weights sum to one to machine precision.</p>
+      <ul>
+        <li><code>model.py</code>: the TFT, dataset construction, training, and prediction</li>
+        <li><code>portfolio.py</code>: Markowitz optimization, the efficient frontier, and backtesting</li>
+        <li><code>data.py</code>: the yfinance pipeline and feature engineering</li>
+        <li><code>app.py</code>: the six-tab Streamlit dashboard</li>
+      </ul>
+      <p class="muted">Next: per-step re-prediction, Black-Litterman blending of the forecasts with equilibrium priors, long-short construction, and a hyperparameter search.</p>
+      <div class="links-row"><a href="https://github.com/mattjackson7/tft-portfolio-optimizer">Code on GitHub</a></div>
+    </section>
+
+    <nav class="pager" aria-label="Pages">
+      <a class="prev" href="risk-engine.html"><span>&larr; Previous</span><strong>Risk engine</strong></a>
+      <a class="next" href="experience.html"><span>Next &rarr;</span><strong>Experience</strong></a>
+    </nav>
+  </main>
+
+  <footer class="foot">
+    <span>&copy; <span id="year">2026</span> Matthew Jackson</span>
+    <span>Press M for the site map</span>
+  </footer>
+
+  <script src="js/site.js?v=14"></script>
+  <script src="js/pathnav.js?v=11"></script>
+  <script src="js/optimizer.js?v=11"></script>
+  <script src="js/story.js?v=11"></script>
+  <script src="js/viz.js?v=11"></script>
+  <script src="js/optimizer-backtest.js?v=11"></script>
+  <script src="js/optimizer-story.js?v=11"></script>
+</body>
+</html>
