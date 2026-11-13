@@ -14,7 +14,7 @@
   <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
   <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"></script>
   <script defer src="js/math.js?v=11"></script>
-  <link rel="stylesheet" href="css/site.css?v=19">
+  <link rel="stylesheet" href="css/site.css?v=21">
 </head>
 <body class="page-contact" data-page="contact">
 
@@ -36,12 +36,28 @@
       <p class="kicker">Get in touch</p>
       <h1 class="page-title">Contact</h1>
       <p class="ask">Open to quantitative finance roles and projects. The fastest way to reach me is email.</p>
-      <a class="email" href="mailto:mjack24@uwo.ca">mjack24@uwo.ca</a>
+      <div class="email-row">
+        <a class="email" href="mailto:mjack24@uwo.ca">mjack24@uwo.ca</a>
+        <button class="chip copy-email" type="button" data-email="mjack24@uwo.ca">Copy email</button>
+      </div>
       <div class="links-row">
         <a href="https://github.com/mattjackson7">GitHub</a>
         <a href="https://www.linkedin.com/in/mattjackson31">LinkedIn</a>
         <a href="Resume.pdf">Resume</a>
       </div>
+
+      <dl class="cfacts">
+        <div><dt>Now</dt><dd>Master of Financial Economics at Western University, Sept 2026 to Dec 2027, after a BSc in physics at Guelph and a summer in wealth management at National Bank Financial.</dd></div>
+        <div><dt>Looking for</dt><dd>Quantitative research, risk, and derivatives roles: internships during the program, and full-time from January 2028.</dd></div>
+        <div><dt>Based in</dt><dd>London, Ontario, and open to relocating.</dd></div>
+      </dl>
+
+      <p class="kicker work-kicker">Or start with the work</p>
+      <ul class="work-links">
+        <li><a href="portfolio-optimizer.html"><b>Return forecasting &amp; optimization</b><span>A Temporal Fusion Transformer feeding mean-variance optimization</span></a></li>
+        <li><a href="risk-engine.html"><b>Monte Carlo risk engine</b><span>VaR, CVaR, stress tests and Kupiec backtesting</span></a></li>
+        <li><a href="options-pricing.html"><b>Options pricing &amp; volatility</b><span>Black-Scholes, binomial trees, Greeks and implied vol</span></a></li>
+      </ul>
     </section>
     <!-- a vibrating string, plucked by the cursor or a finger: js/contact.js -->
     <div class="string-wrap">
@@ -56,6 +72,6 @@
   </footer>
 
   <script src="js/site.js?v=14"></script>
-  <script src="js/contact.js?v=11"></script>
+  <script src="js/contact.js?v=12"></script>
 </body>
 </html>

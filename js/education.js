@@ -74,11 +74,24 @@
   window.addEventListener('resize', kick);
   function clamp01(v) { return v < 0 ? 0 : v > 1 ? 1 : v; }
   // 0 when the element's middle is near the bottom of the screen, 1 when it is near the top
+  // scroll position through a demo, 0 to 1: empty the moment its gauge first comes fully into view
+  // at the bottom of the screen, full just as the course title is about to pass under the top bar
   function progress(el, a, b) {
-    var r = el.getBoundingClientRect(), vh = window.innerHeight, m = r.top + r.height / 2;
-    var p = clamp01(((a || 0.85) * vh - m) / (((a || 0.85) - (b || 0.2)) * vh));
+    var vh = window.innerHeight, fig = el.closest && el.closest('figure'),
+        drv = fig && fig.querySelector('.drive'), ttl = fig && fig.querySelector('.demo-course');
+    var p, start = 0, end = 0;
+    if (drv && ttl && drv.offsetParent) {
+      // how far the page still has to scroll to reach each point (both shrink as you scroll down)
+      start = drv.getBoundingClientRect().bottom - vh; end = ttl.getBoundingClientRect().top - navH();
+    }
+    if (end > start + 40) p = clamp01(-start / (end - start));
+    else {   // no gauge, or a demo too tall for the screen: the old window around the middle of the canvas
+      var r = el.getBoundingClientRect(), m = r.top + r.height / 2;
+      p = clamp01(((a || 0.85) * vh - m) / (((a || 0.85) - (b || 0.2)) * vh));
+    }
     return p * p * (3 - 2 * p);
   }
+  function navH() { var n = document.querySelector('.nav a.brand'); return n ? n.getBoundingClientRect().bottom + 12 : 64; }
   // a read-only gauge that shows what scrolling is doing
   function gauge(id) {
     var g = document.getElementById(id), out = g && g.querySelector('output');
@@ -252,6 +265,7 @@
       if (svg.lastChild !== nowTag) svg.appendChild(nowTag);
       nowTag.setAttribute('y', inside ? (ys < 16 ? ys + 13 : ys - 5) : -10); nowTag.textContent = inside ? termLong(TERMS[ti]) : '';
     }
+
     onScroll(update);
     window.addEventListener('resize', function () { if (host.clientWidth !== lastW) build(); });
     read.innerHTML = DEF;

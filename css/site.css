@@ -477,6 +477,20 @@ img, canvas, svg { display: block; max-width: 100%; }
   transition: color 0.15s;
 }
 .email:hover { color: var(--rope); }
+.email-row { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 12px 18px; margin-top: 26px; }
+.email-row .email { margin-top: 0; }
+.copy-email { cursor: pointer; font: 500 0.8rem var(--mono); color: var(--mist); margin-bottom: 6px; }
+.copy-email:hover, .copy-email.done { color: var(--foam); border-color: var(--accent); }
+.cfacts { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 15rem), 1fr)); gap: 18px 32px; max-width: 60rem; margin: clamp(36px, 5vw, 56px) 0 0; }
+.cfacts div { border-top: 1px solid var(--line); padding-top: 12px; }
+.cfacts dt { font: 500 0.72rem/1.4 var(--mono); letter-spacing: 0.08em; text-transform: uppercase; color: var(--accent); }
+.cfacts dd { margin: 6px 0 0; color: var(--mist); line-height: 1.5; }
+.work-kicker { margin-top: clamp(36px, 5vw, 56px); }
+.work-links { list-style: none; margin: 10px 0 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 15rem), 1fr)); gap: 12px; max-width: 60rem; }
+.work-links a { display: flex; flex-direction: column; gap: 4px; height: 100%; padding: 14px 16px; border: 1px solid var(--line); border-radius: 8px; text-decoration: none; transition: border-color 0.15s, background 0.15s; }
+.work-links a:hover, .work-links a:focus-visible { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 7%, transparent); }
+.work-links b { font-weight: 600; color: var(--foam); }
+.work-links span { font-size: 0.88rem; color: var(--mist); line-height: 1.4; }
 .string-wrap { position: relative; flex: 1; min-height: 220px; margin: 0 calc(-1 * var(--pad)); }
 #string { position: absolute; inset: 0; width: 100%; height: 100%; }
 .string-cap {
@@ -1091,9 +1105,11 @@ img, canvas, svg { display: block; max-width: 100%; }
 .tree, .tree * { overflow-anchor: none; }
 .tree-head {
   position: sticky; top: calc(58px + env(safe-area-inset-top, 0px)); z-index: 5; display: grid; align-items: end;
-  padding: 10px 0 8px; background: var(--deep); border-bottom: 1px solid var(--line); box-shadow: 0 -70px 0 var(--deep);
+  padding: 10px 0 8px; background: var(--deep); border-bottom: 1px solid var(--line);
   font: 500 0.72rem/1.2 var(--mono); color: var(--mist);
 }
+/* cover the strip between the fixed nav and the pinned head so nodes don't show through */
+.tree-head::before { content: ""; position: absolute; left: 0; right: 0; bottom: 100%; height: calc(60px + env(safe-area-inset-top, 0px)); background: var(--deep); }
 .tree-head span { padding: 0 2px; text-align: center; color: var(--c, var(--mist)); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .tree svg { display: block; overflow: visible; }
 .t-band { fill: rgba(143, 177, 189, 0.045); }

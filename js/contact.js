@@ -1,3 +1,15 @@
+// copy-email button: clipboard where allowed, otherwise select the address so it can be copied by hand
+(function () {
+  var b = document.querySelector('.copy-email');
+  if (!b) return;
+  b.addEventListener('click', function () {
+    var addr = b.getAttribute('data-email');
+    var done = function () { b.textContent = 'Copied'; b.classList.add('done'); setTimeout(function () { b.textContent = 'Copy email'; b.classList.remove('done'); }, 1800); };
+    var fallback = function () { var r = document.createRange(); r.selectNodeContents(document.querySelector('.email')); var sel = getSelection(); sel.removeAllRanges(); sel.addRange(r); b.textContent = 'Press Cmd+C'; };
+    if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(addr).then(done, fallback); else fallback();
+  });
+})();
+
 /* Contact page: a string under tension, solved with the damped wave equation
    u_tt = c^2 u_xx - gamma u_t by finite differences. Moving the cursor (or a
    finger) through the string drags it, and letting go plucks it. It starts
