@@ -42,6 +42,8 @@
     ['ECON3100', 'Game Theory', 'W26'], ['ECON3710', 'Advanced Microeconomics', 'W26'], ['PHYS4130', 'Subatomic Physics', 'W26'],
     ['PHYS4150', 'Solid State Physics', 'W26'], ['PHYS4500', 'Advanced Physics Laboratory', 'W26']
   ];
+  // short names for the course tabs (the full title is in the tooltip and above each demo)
+  var SHORT = {"PHYS1080": "Life Sci Physics I", "PHYS1070": "Life Sci Physics II", "PHYS2330": "E&M I", "PHYS2180": "Lab Techniques", "PHYS2310": "Mechanics I", "PHYS2340": "E&M II", "PHYS2240": "Thermal Physics", "PHYS3130": "Math. Physics", "PHYS3230": "Quantum I", "PHYS3400": "Adv. Mechanics", "NANO3600": "Comp. Methods in Materials Sci.", "PHYS3000": "Optics", "PHYS4040": "Quantum II", "IPS3000": "Science Comm.", "PHYS3510": "Intermediate Lab", "PHYS4180": "Adv. E&M", "PHYS4240": "Stat Physics II", "PHYS4130": "Subatomic", "PHYS4150": "Solid State", "PHYS4500": "Advanced Lab", "MATH1080": "Calculus I", "MATH1160": "Linear Algebra", "MATH1210": "Calculus II", "STAT2040": "Statistics I", "MATH2000": "Proofs", "MATH2200": "Adv. Calculus I", "MATH2210": "Adv. Calculus II", "MATH3260": "Complex Analysis", "MATH2270": "Diff. Equations", "MATH2130": "Numerical Methods", "MATH3130": "Abstract Algebra", "MATH3100": "Diff. Equations II", "ECON1050": "Microeconomics", "ECON1100": "Macroeconomics", "FIN2000": "Finance", "ECON2310": "Intermediate Micro", "ECON3740": "Econometrics", "ACCT1220": "Accounting", "ECON2410": "Intermediate Macro", "ECON4700": "Math. Economics", "ECON3100": "Game Theory", "ECON3710": "Advanced Micro", "BIOL1070": "Biodiversity", "BIOL1080": "Health Biology", "CHEM1040": "Chemistry I", "BIOL1090": "Cell Biology", "CHEM1050": "Chemistry II", "BIOC2580": "Biochemistry", "MBG2040": "Genetics", "BIOM3200": "Physiology", "MCB2050": "Molecular Biology", "NUTR3210": "Nutrition", "BIOC3560": "Adv. Biochemistry", "BIOM3090": "Pharmacology", "CIS1200": "Computing", "CIS1500": "Programming", "PSYC1000": "Psychology", "LING1000": "Linguistics"};
   // course -> the figure that demonstrates it (the hand-written ones on the page, or one built by def() in the edu-*.js files)
   var DEMO = { PHYS3230: 'qm', PHYS2330: 'field', PHYS2240: 'gas',
     MATH1160: 'linalg', MATH2130: 'numerics', STAT2040: 'clt' };
@@ -76,7 +78,7 @@
   // 0 when the element's middle is near the bottom of the screen, 1 when it is near the top
   // scroll position through a demo, 0 to 1: empty the moment its gauge first comes fully into view
   // at the bottom of the screen, full just as the course title is about to pass under the top bar
-  function progress(el, a, b) {
+  function rawProgress(el, a, b) {
     var vh = window.innerHeight, fig = el.closest && el.closest('figure'),
         drv = fig && fig.querySelector('.drive'), ttl = fig && fig.querySelector('.demo-course');
     var p, start = 0, end = 0;
@@ -91,6 +93,50 @@
     }
     return p * p * (3 - 2 * p);
   }
+  // the gauges can also be dragged or clicked: the demo eases to the chosen value and holds it until the
+  // page is scrolled again, then glides back to wherever scrolling says it should be
+  var manual = {}, mRun = false, mLast = 0;
+  function progress(el, a, b) {
+    var p = rawProgress(el, a, b), fig = el.closest && el.closest('figure'), o = fig && manual[fig.id];
+    if (!o) return p; o.raw = p; return o.v;
+  }
+  function mloop(ts) {
+    var dt = mLast ? Math.min(0.05, (ts - mLast) / 1000) : 1 / 60, any = false; mLast = ts;
+    Object.keys(manual).forEach(function (id) {
+      var o = manual[id], t = o.follow ? o.raw : o.tgt;
+      o.v += (t - o.v) * Math.min(1, dt * (o.follow ? 7 : 10));
+      if (o.follow && Math.abs(o.v - o.raw) < 0.002) delete manual[id]; else any = true;
+    });
+    kick();
+    if (any) requestAnimationFrame(mloop); else { mRun = false; mLast = 0; }
+  }
+  function mstart() { if (!mRun) { mRun = true; mLast = 0; requestAnimationFrame(mloop); } }
+  function setGauge(tr, v) {
+    var fig = tr.closest('figure'), cv = fig && fig.querySelector('canvas'); if (!fig || !fig.id || !cv) return;
+    var o = manual[fig.id]; if (!o) { var r0 = rawProgress(cv); o = manual[fig.id] = { v: r0, raw: r0 }; }
+    o.tgt = clamp01(v); o.follow = false; o.y0 = window.scrollY; tr.setAttribute('aria-valuenow', Math.round(o.tgt * 100)); mstart();
+  }
+  document.addEventListener('pointerdown', function (e) {
+    var tr = e.target.closest && e.target.closest('.drive .track'); if (!tr) return;
+    e.preventDefault(); try { tr.setPointerCapture(e.pointerId); } catch (_) {}
+    function at(ev) { var r = tr.getBoundingClientRect(); setGauge(tr, (ev.clientX - r.left) / r.width); }
+    function up() { tr.removeEventListener('pointermove', at); tr.removeEventListener('pointerup', up); tr.removeEventListener('pointercancel', up); tr.classList.remove('dragging'); }
+    at(e); tr.classList.add('dragging'); tr.addEventListener('pointermove', at); tr.addEventListener('pointerup', up); tr.addEventListener('pointercancel', up);
+  });
+  document.addEventListener('keydown', function (e) {
+    var tr = e.target.closest && e.target.closest('.drive .track'); if (!tr) return;
+    var d = { ArrowRight: 0.05, ArrowUp: 0.05, ArrowLeft: -0.05, ArrowDown: -0.05, Home: -1, End: 1 }[e.key]; if (d === undefined) return;
+    e.preventDefault(); var fig = tr.closest('figure'), o = fig && manual[fig.id], cv = fig && fig.querySelector('canvas');
+    setGauge(tr, (o ? o.tgt : cv ? rawProgress(cv) : 0) + d);
+  });
+  window.addEventListener('scroll', function () {
+    var any = false; Object.keys(manual).forEach(function (id) { var o = manual[id]; if (!o.follow && Math.abs(window.scrollY - o.y0) > 6) { o.follow = true; any = true; } });
+    if (any) mstart();
+  }, { passive: true });
+  function tracks() { Array.prototype.forEach.call(document.querySelectorAll('.drive .track'), function (tr) {
+    if (tr.hasAttribute('role')) return; var k = tr.parentNode.querySelector('.k');
+    tr.setAttribute('role', 'slider'); tr.tabIndex = 0; tr.setAttribute('aria-valuemin', 0); tr.setAttribute('aria-valuemax', 100); tr.setAttribute('aria-label', (k ? k.textContent : 'Value') + ' (drag, or scroll the page)'); }); }
+  document.addEventListener('DOMContentLoaded', tracks);
   function navH() { var n = document.querySelector('.nav a.brand'); return n ? n.getBoundingClientRect().bottom + 12 : 64; }
   // a read-only gauge that shows what scrolling is doing
   function gauge(id) {
@@ -303,8 +349,18 @@
       st.W = w; st.H = h; st.d = d;
     }
     st.size = size;
-    st.redraw = function () { st.dirty = true; if (!st.running && st.visible) loop(); };
+    st.redraw = function () { st.dirty = true; if (!st.running && st.visible) loop(); if (reduce) settleSoon(); };
     var last = 0;
+    // reduced motion: nothing plays, but each demo is run forward out of sight (about four simulated seconds)
+    // and shown as one finished frame, again after each change once scrolling pauses
+    var settleT = 0, settled = false;
+    function settle() {
+      size(); if (!st.frame || !st.W || !st.H) return;
+      var t0 = performance.now();
+      for (var i = 0; i < 240 && performance.now() - t0 < 120; i++) st.frame(1 / 60);
+      settled = true; if (st.draw) { st.draw(); st.dirty = false; }
+    }
+    function settleSoon() { clearTimeout(settleT); settleT = setTimeout(settle, 180); }
     function loop(ts) {
       size();
       if (!st.W || !st.H) { st.running = false; last = 0; return; }   // hidden (a tab not chosen)
@@ -313,9 +369,9 @@
       if ((st.dirty || st.frame) && st.draw) { st.draw(); st.dirty = false; }
       if (st.frame && st.visible && !reduce) { st.running = true; requestAnimationFrame(loop); } else { st.running = false; last = 0; }
     }
-    new IntersectionObserver(function (es) { st.visible = es[0].isIntersecting; if (st.visible && !st.running) loop(); }, { rootMargin: '80px' }).observe(cv);
+    new IntersectionObserver(function (es) { st.visible = es[0].isIntersecting; if (st.visible && !st.running) loop(); if (st.visible && reduce && !settled) settle(); }, { rootMargin: '80px' }).observe(cv);
     window.addEventListener('resize', function () { st.redraw(); });
-    st.start = function () { if (!st.running) loop(); };
+    st.start = function () { if (!st.running) loop(); if (reduce) settleSoon(); };
     return st;
   }
   function px(st, n) { return n * st.d; }
@@ -638,7 +694,7 @@
     var panel = document.createElement('div'); panel.className = 'dpanel'; panel.dataset.code = code;
     panel.innerHTML = '<figure class="figure demo" id="d-' + code + '"><p class="demo-course">' + pretty(code) + ' &middot; ' + c[1] + '</p>' +
       '<canvas id="cv-' + code + '" role="img" aria-label="' + o.aria + '"></canvas><div class="demo-controls">' +
-      (o.gauge ? '<div class="drive" id="g-' + code + '"><span class="k">' + o.gauge + '</span><span class="track"><i></i></span><output></output><span class="how">scroll</span></div>' : '') +
+      (o.gauge ? '<div class="drive" id="g-' + code + '"><span class="k">' + o.gauge + '</span><span class="track"><i></i></span><output></output><span class="how">scroll or drag</span></div>' : '') +
       (o.hint ? '<span class="lbl hint">' + o.hint + '</span>' : '') + (o.controls || '') +
       '</div><figcaption><span id="rd-' + code + '"></span></figcaption></figure><p class="demo-note">' + o.note + '</p>';
     sec.insertBefore(panel, sec.querySelector('.also'));
@@ -689,7 +745,8 @@
       var bar = document.createElement('div'); bar.className = 'dtabs'; bar.setAttribute('role', 'tablist'); bar.setAttribute('aria-label', 'Courses');
       panels.forEach(function (p) {
         var code = p.dataset.code, b = document.createElement('button'); b.type = 'button'; b.className = 'dtab'; b.dataset.code = code; b.setAttribute('role', 'tab');
-        b.style.setProperty('--c', SUBJ[subjOf(code)].c); b.title = BYCODE[code][1]; b.textContent = pretty(code);
+        b.style.setProperty('--c', SUBJ[subjOf(code)].c); b.title = BYCODE[code][1];
+        b.innerHTML = '<span class="dt-code">' + pretty(code) + '</span><span class="dt-name">' + (SHORT[code] || BYCODE[code][1]).replace(/&/g, '&amp;') + '</span>';
         b.addEventListener('click', function () { showDemo(code); });
         bar.appendChild(b); sec.insertBefore(p, sec.querySelector('.also'));
       });

@@ -137,7 +137,7 @@
   }
   function linkedSkills(id) { return LINKS[id] || []; }
   function rolesFor(skill) { return LEFT.filter(function (n) { return LINKS[n.id].indexOf(skill) >= 0; }).map(function (n) { return n.id; }); }
-  function focus() { return hover || (reduce ? null : LEFT[auto % LEFT.length].id); }
+  function focus() { return hover || LEFT[(reduce ? 0 : auto) % LEFT.length].id; }
   function drawNet(nowT) {
     var c = cv.getContext('2d');
     c.setTransform(dpr, 0, 0, dpr, 0, 0);

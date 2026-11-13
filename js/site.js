@@ -1,3 +1,36 @@
+/* Reduce Motion: when the system asks for less motion the site holds every figure still, and a small
+   note says so with a way to play the animations anyway (remembered in this browser). Overriding
+   matchMedia here, before any other script asks, lets every figure read the choice the same way. */
+(function () {
+  var mq = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)');
+  if (!mq || !mq.matches) return;
+  var on = false, hidden = false;
+  try { on = localStorage.getItem('motion') === 'on'; hidden = sessionStorage.getItem('motion-note') === 'off'; } catch (e) {}
+  if (on) {
+    document.documentElement.classList.add('motion-ok');
+    var orig = window.matchMedia.bind(window), noop = function () {};
+    window.matchMedia = function (q) {
+      if (/prefers-reduced-motion\s*:\s*reduce/.test(q)) return { matches: false, media: q, onchange: null, addListener: noop, removeListener: noop, addEventListener: noop, removeEventListener: noop, dispatchEvent: function () { return false; } };
+      return orig(q);
+    };
+  }
+  if (hidden) return;
+  var note = document.createElement('div');
+  note.className = 'motion-note';
+  note.setAttribute('role', 'status');
+  note.innerHTML = '<span>' + (on ? 'Animations playing<span class="mn-long">, though Reduce Motion is on</span>' : 'Animations paused<span class="mn-long">: Reduce Motion is on</span>') + '</span>' +
+    '<button type="button" class="mn-go">' + (on ? 'Pause them' : 'Play them') + '</button>' +
+    '<button type="button" class="mn-x" aria-label="Hide this note">&times;</button>';
+  document.body.appendChild(note);
+  note.querySelector('.mn-go').addEventListener('click', function () {
+    try { if (on) localStorage.removeItem('motion'); else localStorage.setItem('motion', 'on'); } catch (e) {}
+    location.reload();
+  });
+  note.querySelector('.mn-x').addEventListener('click', function () {
+    note.hidden = true; try { sessionStorage.setItem('motion-note', 'off'); } catch (e) {}
+  });
+})();
+
 /* Shared by every page: the footer year and the site map.
 
    The site map is a full-screen 2D potential landscape with a well for each

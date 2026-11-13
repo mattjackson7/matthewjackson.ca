@@ -134,5 +134,6 @@
   else window.addEventListener('resize', resize);
 
   resize();
-  if (!reduce) { pluck(0.3, -46); kick(); } else draw();
+  // reduced motion: the same pluck, run on out of sight for a moment, then held still mid-ring
+  if (!reduce) { pluck(0.3, -46); kick(); } else { pluck(0.3, -46); for (var s = 0; s < 14 * SUB; s++) step(); draw(); }
 })();

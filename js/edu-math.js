@@ -103,13 +103,16 @@
     var FS = [['peaks', function (x, y) { return 0.9 * Math.exp(-((x - 0.5) * (x - 0.5) + y * y) * 2) - 0.6 * Math.exp(-((x + 0.6) * (x + 0.6) + (y - 0.5) * (y - 0.5)) * 3); }],
       ['saddle', function (x, y) { return 0.45 * (x * x - y * y); }], ['ripple', function (x, y) { var r = Math.hypot(x, y); return 0.35 * Math.cos(4 * r) * Math.exp(-r); }],
       ['monkey saddle', function (x, y) { return 0.4 * (x * x * x - 3 * x * y * y); }]];
-    var fi = 0, pt = [0.3, -0.2], tgt = null, rot = 0.6, clock = 0;
-    onScroll(function () { var p = progress(st.cv); fi = Math.min(FS.length - 1, Math.floor(p * FS.length)); g(p, FS[fi][0]); });
+    // scrolling sets a position along the list of surfaces; each one holds for a while, then morphs into the next
+    var fi = 0, pos = 0, aim = 0, pt = [0.3, -0.2], tgt = null, rot = 0.6, clock = 0;
+    onScroll(function () { var p = progress(st.cv); aim = p * (FS.length - 1); g(p, FS[Math.round(aim)][0]); });
+    function blend() { var i = Math.min(FS.length - 2, Math.floor(pos)), fr = pos - i, w = Math.max(0, Math.min(1, (fr - 0.3) / 0.4)); w = w * w * (3 - 2 * w);
+      fi = w < 0.5 ? i : i + 1; var f0 = FS[i][1], f1 = FS[i + 1][1]; return w <= 0 ? f0 : w >= 1 ? f1 : function (x, y) { return f0(x, y) * (1 - w) + f1(x, y) * w; }; }
     hover(st, function (p) { tgt = p ? [(p[0] / st.W - 0.5) * 2.6, (0.5 - p[1] / st.H) * 2.6] : null; });
-    st.frame = function (dt) { clock += dt; rot += dt * 0.15; var aim = tgt || [0.8 * Math.cos(clock * 0.5), 0.8 * Math.sin(clock * 0.37)]; aim = aim.map(function (v) { return Math.max(-1, Math.min(1, v)); });
-      pt[0] += (aim[0] - pt[0]) * Math.min(1, dt * 5); pt[1] += (aim[1] - pt[1]) * Math.min(1, dt * 5); };
+    st.frame = function (dt) { clock += dt; rot += dt * 0.15; pos += (aim - pos) * Math.min(1, dt * 4); var aim2 = tgt || [0.8 * Math.cos(clock * 0.5), 0.8 * Math.sin(clock * 0.37)]; aim2 = aim2.map(function (v) { return Math.max(-1, Math.min(1, v)); });
+      pt[0] += (aim2[0] - pt[0]) * Math.min(1, dt * 5); pt[1] += (aim2[1] - pt[1]) * Math.min(1, dt * 5); };
     st.draw = function () {
-      clear(st); var c = st.ctx, W = st.W, H = st.H, f = FS[fi][1], n = 34, G = [], view = { rot: rot, el: 0.5, cx: W / 2, cy: H * 0.56, s: Math.min(W, H * 1.6) * 0.32 };
+      clear(st); var c = st.ctx, W = st.W, H = st.H, f = blend(), n = 34, G = [], view = { rot: rot, el: 0.5, cx: W / 2, cy: H * 0.56, s: Math.min(W, H * 1.6) * 0.32 };
       for (var i = 0; i <= n; i++) { G.push([]); for (var j = 0; j <= n; j++) { var x = -1.2 + 2.4 * j / n, y = -1.2 + 2.4 * i / n, z = f(x, y); G[i].push([x, y, z, z]); } }
       E.mesh(st, G, view, function (v, sh) { var k = Math.max(0, Math.min(1, (v + 0.9) / 1.8)); return E.rgb([60 + 135 * k, 50 + 105 * k, 110 + 145 * k], sh); });
       var h = 1e-4, fx = (f(pt[0] + h, pt[1]) - f(pt[0] - h, pt[1])) / (2 * h), fy = (f(pt[0], pt[1] + h) - f(pt[0], pt[1] - h)) / (2 * h), z0 = f(pt[0], pt[1]);

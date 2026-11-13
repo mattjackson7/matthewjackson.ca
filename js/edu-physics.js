@@ -217,16 +217,21 @@
     function J(m, x) { var s = 0, term; for (var k = 0; k < 30; k++) { term = Math.pow(-1, k) * Math.pow(x / 2, 2 * k + m) / (fact(k) * fact(k + m)); s += term; if (Math.abs(term) < 1e-12 && k > m) break; } return s; }
     function fact(n) { var f = 1; for (var i = 2; i <= n; i++) f *= i; return f; }
     var list = function () { return mode === 'sph' ? SPH : DRUM; };
-    E.chips('[data-sh]', 'sh', function (k) { mode = k; kick(); });
-    function kick() { var p = progress(st.cv), L = list(); idx = Math.min(L.length - 1, Math.floor(p * L.length)); var m = L[idx];
+    E.chips('[data-sh]', 'sh', function (k) { mode = k; kick(); pos = aim; });
+    // scrolling sets a position along the list of modes; each holds for a while, then morphs into the next (a superposition on the way)
+    var pos = 0, aim = 0;
+    function kick() { var p = progress(st.cv), L = list(); aim = p * (L.length - 1); idx = Math.round(aim); var m = L[idx];
       g(p, mode === 'sph' ? 'ℓ = ' + m[0] + ', m = ' + m[1] : 'm = ' + m[0] + ', n = ' + m[1]); }
     onScroll(kick);
-    st.frame = function (dt) { rot += dt * 0.35; t += dt; };
+    function mix() { var L = list(), q = Math.max(0, Math.min(L.length - 1, pos)), i = Math.min(L.length - 2, Math.floor(q)), fr = q - i, w = Math.max(0, Math.min(1, (fr - 0.3) / 0.4)); return [i, w * w * (3 - 2 * w)]; }
+    st.frame = function (dt) { rot += dt * 0.35; t += dt; pos += (aim - pos) * Math.min(1, dt * 4); };
     st.draw = function () {
       clear(st); var c = st.ctx, W = st.W, H = st.H, G = [], view = { rot: rot, el: 0.42, cx: W / 2, cy: H / 2, s: Math.min(W, H) * 0.4 };
       if (mode === 'sph') {
-        var l = SPH[idx][0], m = SPH[idx][1], NT = 36, NP = 64, mx = 1e-9, raw = [];
-        for (var i = 0; i <= NT; i++) { raw.push([]); for (var j = 0; j <= NP; j++) { var th = i / NT * Math.PI, ph = j / NP * 2 * Math.PI, v = plm(l, m, Math.cos(th)) * Math.cos(m * ph); raw[i].push(v); mx = Math.max(mx, Math.abs(v)); } }
+        var mw = mix(), A0 = SPH[mw[0]], A1 = SPH[mw[0] + 1], w = mw[1], l = (w < 0.5 ? A0 : A1)[0], m = (w < 0.5 ? A0 : A1)[1], NT = 36, NP = 64, mx = 1e-9, raw = [];
+        function ylm(q, th, ph) { return plm(q[0], q[1], Math.cos(th)) * Math.cos(q[1] * ph); }
+        var n0 = 1e-9, n1 = 1e-9; for (var i = 0; i <= NT; i++) for (var j = 0; j <= NP; j += 4) { n0 = Math.max(n0, Math.abs(ylm(A0, i / NT * Math.PI, j / NP * 2 * Math.PI))); if (w > 0) n1 = Math.max(n1, Math.abs(ylm(A1, i / NT * Math.PI, j / NP * 2 * Math.PI))); }
+        for (i = 0; i <= NT; i++) { raw.push([]); for (j = 0; j <= NP; j++) { var th = i / NT * Math.PI, ph = j / NP * 2 * Math.PI, v = (1 - w) * ylm(A0, th, ph) / n0 + (w > 0 ? w * ylm(A1, th, ph) / n1 : 0); raw[i].push(v); mx = Math.max(mx, Math.abs(v)); } }
         for (i = 0; i <= NT; i++) { G.push([]); for (j = 0; j <= NP; j++) { th = i / NT * Math.PI; ph = j / NP * 2 * Math.PI; var r = Math.abs(raw[i][j]) / mx;
           G[i].push([r * Math.sin(th) * Math.cos(ph), r * Math.sin(th) * Math.sin(ph), r * Math.cos(th), raw[i][j] / mx]); } }
         view.s *= 1.15;
@@ -234,9 +239,10 @@
         text(st, 'Y' + '(ℓ=' + l + ', m=' + m + ')', px(st, 12), px(st, 22), FOAM, 'left', 12);
         read('The ℓ = ' + l + ', m = ' + m + ' spherical harmonic: ' + (l - m) + ' nodal circle' + (l - m === 1 ? '' : 's') + ' of latitude and ' + m + ' nodal great circle' + (m === 1 ? '' : 's') + ' through the poles. Scroll for higher ℓ.');
       } else {
-        var d = DRUM[idx], NR = 18, NA = 56, osc = Math.cos(t * 2.4 * d[2] / 2.4048);
-        for (i = 0; i <= NR; i++) { G.push([]); for (j = 0; j <= NA; j++) { var rr = i / NR, a = j / NA * 2 * Math.PI, z = J(d[0], d[2] * rr) * Math.cos(d[0] * a);
-          G[i].push([rr * Math.cos(a), rr * Math.sin(a), 0.45 * z * osc, z * osc]); } }
+        var dm = mix(), D0 = DRUM[dm[0]], D1 = DRUM[dm[0] + 1], dw = dm[1], d = dw < 0.5 ? D0 : D1, NR = 18, NA = 56, o0 = Math.cos(t * 2.4 * D0[2] / 2.4048), o1 = Math.cos(t * 2.4 * D1[2] / 2.4048);
+        for (i = 0; i <= NR; i++) { G.push([]); for (j = 0; j <= NA; j++) { var rr = i / NR, a = j / NA * 2 * Math.PI,
+          z = (1 - dw) * J(D0[0], D0[2] * rr) * Math.cos(D0[0] * a) * o0 + (dw > 0 ? dw * J(D1[0], D1[2] * rr) * Math.cos(D1[0] * a) * o1 : 0);
+          G[i].push([rr * Math.cos(a), rr * Math.sin(a), 0.45 * z, z]); } }
         view.el = 0.62; view.cy = H * 0.55; view.s = Math.min(W * 0.42, H * 0.62);
         E.mesh(st, G, view, function (v, sh) { var k = Math.min(1, Math.abs(v) * 2.2); return E.rgb(v >= 0 ? [40 + 84 * k, 80 + 116 * k, 110 + 145 * k] : [60 + 195 * k, 60 + 46 * k, 70 + 15 * k], sh); });
         text(st, 'J' + d[0] + ' mode, zero ' + d[1] + ':  frequency ' + (d[2] / 2.4048).toFixed(3) + '× fundamental', px(st, 12), px(st, 22), FOAM, 'left', 12);
@@ -487,10 +493,10 @@
   });
   /* PHYS 4130: the chart of nuclides, with the nucleus itself decaying beside it */
   def('PHYS4130', { gauge: 'Starting nucleus', hint: 'Point at any nucleus to watch it decay', aria: 'A chart of nuclides coloured by decay mode, predicted from the semi-empirical mass formula, beside a picture of the nucleus emitting alpha and beta particles step by step.',
-    note: 'Every square is a nucleus with \\(Z\\) protons and \\(N\\) neutrons, coloured by how the liquid-drop model, the semi-empirical mass formula \\(B = a_VA - a_SA^{2/3} - a_C\\tfrac{Z(Z-1)}{A^{1/3}} - a_A\\tfrac{(N-Z)^2}{A} + \\delta\\), says it decays: a nucleus decays if some neighbour is more tightly bound. On the right is the nucleus itself (protons red, neutrons blue). An \\(\\alpha\\) decay throws out two protons and two neutrons, moving two squares down and left; \\(\\beta^-\\) turns a neutron into a proton, emitting an electron and an antineutrino, one square up and left; \\(\\beta^+\\) does the reverse. It is only a model, so some squares disagree with real data (uranium-238&rsquo;s chain stops at lead-210 here rather than lead-206), but it finds the valley of stability and the shape of the heavy decay chains.'
+    note: 'Every square is a nucleus with \\(Z\\) protons and \\(N\\) neutrons, coloured by how the liquid-drop model, the semi-empirical mass formula \\(B = a_VA - a_SA^{2/3} - a_C\\tfrac{Z(Z-1)}{A^{1/3}} - a_A\\tfrac{(N-Z)^2}{A} + \\delta\\), says it decays: a nucleus decays if some neighbour is more tightly bound. On the right is the nucleus itself, packed as a ball (protons red, neutrons blue). An \\(\\alpha\\) decay throws out two protons and two neutrons, moving two squares down and left; \\(\\beta^-\\) turns a neutron into a proton, emitting an electron and an antineutrino, one square up and left; \\(\\beta^+\\) does the reverse. It is only a model, so some squares disagree with real data (uranium-238&rsquo;s chain stops at lead-210 here rather than lead-206), but it finds the valley of stability and the shape of the heavy decay chains.'
   }, function (st, g, read) {
     var EL = 'H He Li Be B C N O F Ne Na Mg Al Si P S Cl Ar K Ca Sc Ti V Cr Mn Fe Co Ni Cu Zn Ga Ge As Se Br Kr Rb Sr Y Zr Nb Mo Tc Ru Rh Pd Ag Cd In Sn Sb Te I Xe Cs Ba La Ce Pr Nd Pm Sm Eu Gd Tb Dy Ho Er Tm Yb Lu Hf Ta W Re Os Ir Pt Au Hg Tl Pb Bi Po At Rn Fr Ra Ac Th Pa U Np Pu Am Cm Bk Cf Es Fm'.split(' ');
-    var ZM = 100, NM = 160, mode = {}, start = [92, 146], chain = [], ci = 0, u = 0, hov = null, nuc = null, STEP = 2.8;
+    var ZM = 100, NM = 160, mode = {}, start = [92, 146], chain = [], ci = 0, u = 0, hov = null, STEP = 2.8;
     function B(Z, A) { if (A < 1 || Z < 0 || Z > A) return 0; var N = A - Z, d = 11.2 / Math.sqrt(A) * (Z % 2 === 0 && N % 2 === 0 ? 1 : Z % 2 && N % 2 ? -1 : 0);
       return 15.5 * A - 17 * Math.pow(A, 2 / 3) - 0.695 * Z * (Z - 1) / Math.pow(A, 1 / 3) - 22 * (N - Z) * (N - Z) / A + d; }   // coefficients fitted to known stable isobars
     function decay(Z, N) {
@@ -500,21 +506,34 @@
       if (qm > 0 && qm >= qp) return 'b-'; if (qp > 0) return 'b+'; if (qa > 2.5 && Z > 82) return 'a'; return 's';
     }
     for (var Z = 1; Z <= ZM; Z++) for (var N = 0; N <= NM; N++) { var m = decay(Z, N); if (m) mode[Z + ',' + N] = m; }
-    function layout(z, n) {   // nucleons packed in a disc, protons chosen at random
-      var A = z + n, R = rng(z * 1000 + n), pts = [], idx = [];
-      for (var i = 0; i < A; i++) { var r = Math.sqrt((i + 0.5) / A), a = i * 2.39996; pts.push({ x: r * Math.cos(a), y: r * Math.sin(a), p: false }); idx.push(i); }
+    // the nucleus: one set of nucleons kept for the whole chain, packed as soft spheres in 3D. Each frame they are
+    // pulled toward the centre and pushed apart where they overlap, so after an emission the rest close the gap on their own
+    var nucs = [], em = [], nz = 0, nn = 0, rot = 0.6, TILT = 0.38, fade = 0, RC = { p: [255, 106, 85], n: [124, 196, 255] };
+    function seed(z, n) {
+      var A = z + n, R = rng(z * 1000 + n), Rb = Math.cbrt(A / 0.62), idx = [], i;
+      nucs = []; for (i = 0; i < A; i++) { var u1 = 2 * R() - 1, ph = 6.2832 * R(), s = Math.sqrt(1 - u1 * u1), r = Rb * Math.cbrt(R());
+        nucs.push({ x: r * s * Math.cos(ph), y: r * u1, z: r * s * Math.sin(ph), p: false, t: 0, out: null }); idx.push(i); }
       for (i = A - 1; i > 0; i--) { var j = Math.floor(R() * (i + 1)), t = idx[i]; idx[i] = idx[j]; idx[j] = t; }
-      for (i = 0; i < z; i++) pts[idx[i]].p = true;
-      return { z: z, n: n, pts: pts };
+      for (i = 0; i < z; i++) { nucs[idx[i]].p = true; nucs[idx[i]].t = 1; }
+      nz = z; nn = n; for (i = 0; i < 90; i++) relax();
     }
-    function build(z, n) { chain = [[z, n]]; for (var i = 0; i < 40; i++) { var m = mode[z + ',' + n]; if (!m || m === 's') break; if (m === 'a') { z -= 2; n -= 2; } else if (m === 'b-') { z++; n--; } else { z--; n++; } chain.push([z, n]); } ci = 0; u = 0; nuc = layout(chain[0][0], chain[0][1]); pick(); }
-    var em = [];   // the nucleons taking part in the current step
-    function pick() {
+    function relax() {
+      var L = nucs.filter(function (q) { return !q.out; }), k = L.length, i, j;
+      for (i = 0; i < k; i++) { L[i].x *= 0.97; L[i].y *= 0.97; L[i].z *= 0.97; }
+      for (i = 0; i < k; i++) { var a = L[i]; for (j = i + 1; j < k; j++) { var b = L[j], dx = b.x - a.x, dy = b.y - a.y, dz = b.z - a.z, d2 = dx * dx + dy * dy + dz * dz;
+        if (d2 < 3.6 && d2 > 1e-9) { var d = Math.sqrt(d2), f = (1.9 - d) / d * 0.4; a.x -= dx * f; a.y -= dy * f; a.z -= dz * f; b.x += dx * f; b.y += dy * f; b.z += dz * f; } } }
+    }
+    function cam(q) {   // turn about the vertical axis, then tilt toward the viewer
+      var cr = Math.cos(rot), sr = Math.sin(rot), x = q.x * cr + q.z * sr, z1 = -q.x * sr + q.z * cr, ct = Math.cos(TILT), stt = Math.sin(TILT);
+      return [x, q.y * ct - z1 * stt, q.y * stt + z1 * ct];
+    }
+    function build(z, n) { chain = [[z, n]]; for (var i = 0; i < 40; i++) { var m = mode[z + ',' + n]; if (!m || m === 's') break; if (m === 'a') { z -= 2; n -= 2; } else if (m === 'b-') { z++; n--; } else { z--; n++; } chain.push([z, n]); } ci = 0; u = 0; fade = 0; seed(chain[0][0], chain[0][1]); pick(); }
+    function pick() {   // the nucleons on the side facing the way this step's particles will leave
       em = []; if (ci >= chain.length - 1) return; var m = mode[chain[ci][0] + ',' + chain[ci][1]], dir = ci * 2.1 + 0.6, dx = Math.cos(dir), dy = Math.sin(dir);
-      var order = nuc.pts.map(function (p, i) { return [p.x * dx + p.y * dy, i]; }).sort(function (a, b) { return b[0] - a[0]; });
+      var order = nucs.map(function (q, i) { var c = cam(q); return [c[0] * dx + c[1] * dy + c[2] * 0.3, i]; }).sort(function (a, b) { return b[0] - a[0]; });
       var want = m === 'a' ? { p: 2, n: 2 } : m === 'b-' ? { p: 0, n: 1 } : { p: 1, n: 0 };
-      order.forEach(function (o) { var p = nuc.pts[o[1]]; if (p.p && want.p > 0) { want.p--; em.push(o[1]); } else if (!p.p && want.n > 0) { want.n--; em.push(o[1]); } });
-      st.dir = [dx, dy]; st.m = m;
+      order.forEach(function (o) { var q = nucs[o[1]]; if (q.p && want.p > 0) { want.p--; em.push(o[1]); } else if (!q.p && want.n > 0) { want.n--; em.push(o[1]); } });
+      st.dir = [dx, dy]; st.m = m; st.left = false;
     }
     var STARTS = [[92, 146], [92, 143], [90, 142], [94, 145], [95, 146], [88, 138], [86, 136], [84, 126], [27, 33], [53, 78], [55, 82], [19, 21]];
     function nm(z, n) { return EL[z - 1] + '-' + (z + n); }
@@ -523,18 +542,32 @@
       return { wide: wide, cs: cs, x0: px(st, 30), y0: chh - px(st, 24), px0: wide ? cwid + px(st, 10) : 0, py0: wide ? 0 : chh, pw: wide ? st.W - cwid - px(st, 10) : st.W, ph: wide ? st.H : st.H - chh }; }
     hover(st, function (p) { if (!p) { if (hov) { hov = null; build(start[0], start[1]); } return; } var gg = geo(), n = Math.round((p[0] - gg.x0) / gg.cs - 0.5), z = Math.round((gg.y0 - p[1]) / gg.cs - 0.5);
       if (mode[z + ',' + n] && (!hov || hov[0] !== z || hov[1] !== n)) { hov = [z, n]; build(z, n); } });
+    function ease(x) { x = Math.max(0, Math.min(1, x)); return x * x * (3 - 2 * x); }
     st.frame = function (dt) {
-      u += dt / STEP;
-      if (u >= 1) { u = 0; if (ci < chain.length - 1) { ci++; nuc = layout(chain[ci][0], chain[ci][1]); pick(); } else { ci = 0; nuc = layout(chain[0][0], chain[0][1]); pick(); } }
+      dt = Math.min(dt, 0.05); u += dt / STEP; rot += dt * 0.22; fade = Math.min(1, fade + dt * 2.5);
+      var last = ci >= chain.length - 1, m = st.m;
+      if (!last && u > 0.3 && !st.left) {   // the emission starts: alpha nucleons leave the pack, a beta nucleon changes kind
+        st.left = true;
+        if (m === 'a') { var cen = [0, 0, 0]; em.forEach(function (i) { var c = cam(nucs[i]); nucs[i].out = c; cen[0] += c[0] / 4; cen[1] += c[1] / 4; cen[2] += c[2] / 4; }); st.cen = cen; }
+        else em.forEach(function (i) { nucs[i].p = m === 'b-'; st.from = cam(nucs[i]); });
+      }
+      nucs.forEach(function (q) { q.t += ((q.p ? 1 : 0) - q.t) * Math.min(1, dt * 5); });
+      relax(); relax();
+      if (u >= 1) {
+        u = 0;
+        if (!last) { nucs = nucs.filter(function (q) { return !q.out; }); ci++; nz = chain[ci][0]; nn = chain[ci][1]; pick(); }
+        else build(chain[0][0], chain[0][1]);   // fades in again from the start of the chain
+      }
     };
     var COL = { s: [234, 246, 248], 'b-': [124, 196, 255], 'b+': [255, 106, 85], a: [255, 209, 102] }, SYM = { 'b-': 'β⁻', 'b+': 'β⁺', a: 'α' };
-    function ease(x) { x = Math.max(0, Math.min(1, x)); return x * x * (3 - 2 * x); }
+    function shade(rgb, k) { return 'rgb(' + Math.round(Math.min(255, rgb[0] * k)) + ',' + Math.round(Math.min(255, rgb[1] * k)) + ',' + Math.round(Math.min(255, rgb[2] * k)) + ')'; }
+    function tint(rgb, w) { return [rgb[0] + (255 - rgb[0]) * w, rgb[1] + (255 - rgb[1]) * w, rgb[2] + (255 - rgb[2]) * w]; }
     st.draw = function () {
       clear(st); var c = st.ctx, gg = geo(), cs = gg.cs, P = function (z, n) { return [gg.x0 + (n + 0.5) * cs, gg.y0 - (z + 0.5) * cs]; };
       [2, 8, 20, 28, 50, 82, 126].forEach(function (mg) { c.strokeStyle = 'rgba(143,177,189,.15)'; c.lineWidth = px(st, 1); c.beginPath();
         if (mg <= ZM) { c.moveTo(gg.x0, gg.y0 - (mg + 0.5) * cs); c.lineTo(gg.x0 + (NM + 1) * cs, gg.y0 - (mg + 0.5) * cs); }
         c.moveTo(gg.x0 + (mg + 0.5) * cs, gg.y0); c.lineTo(gg.x0 + (mg + 0.5) * cs, gg.y0 - (ZM + 1) * cs); c.stroke(); });
-      for (var k in mode) { var zz = +k.split(',')[0], nn = +k.split(',')[1], col = COL[mode[k]]; c.fillStyle = 'rgba(' + col.join(',') + ',' + (mode[k] === 's' ? 0.95 : 0.5) + ')'; c.fillRect(gg.x0 + nn * cs, gg.y0 - (zz + 1) * cs, Math.max(1, cs - 0.5), Math.max(1, cs - 0.5)); }
+      for (var k in mode) { var zz = +k.split(',')[0], nn2 = +k.split(',')[1], col = COL[mode[k]]; c.fillStyle = 'rgba(' + col.join(',') + ',' + (mode[k] === 's' ? 0.95 : 0.5) + ')'; c.fillRect(gg.x0 + nn2 * cs, gg.y0 - (zz + 1) * cs, Math.max(1, cs - 0.5), Math.max(1, cs - 0.5)); }
       c.strokeStyle = FOAM; c.lineWidth = px(st, 2); c.beginPath(); chain.slice(0, ci + 1).forEach(function (q, i) { var p = P(q[0], q[1]); i ? c.lineTo(p[0], p[1]) : c.moveTo(p[0], p[1]); });
       var mv = ease((u - 0.35) / 0.6), cur = P(chain[ci][0], chain[ci][1]);
       if (ci < chain.length - 1) { var nx = P(chain[ci + 1][0], chain[ci + 1][1]); cur = [cur[0] + (nx[0] - cur[0]) * mv, cur[1] + (nx[1] - cur[1]) * mv]; c.lineTo(cur[0], cur[1]); }
@@ -542,26 +575,36 @@
       text(st, 'neutrons N →', gg.x0 + (NM + 1) * cs, gg.y0 + px(st, 16), MIST, 'right'); text(st, '↑ protons Z', gg.x0 + px(st, 4), gg.y0 - (ZM + 1) * cs + px(st, 4), MIST);
       var lx = gg.x0 + (NM - 40) * cs, ly = gg.y0 - px(st, 70);
       [['stable', 's'], ['β⁻', 'b-'], ['β⁺ / capture', 'b+'], ['α', 'a']].forEach(function (L, i) { c.fillStyle = 'rgb(' + COL[L[1]].join(',') + ')'; c.fillRect(lx, ly + i * px(st, 16) - px(st, 8), px(st, 9), px(st, 9)); text(st, L[0], lx + px(st, 14), ly + i * px(st, 16), MIST); });
-      // the nucleus
-      var A = nuc.z + nuc.n, pcx = gg.px0 + gg.pw / 2, pcy = gg.py0 + gg.ph / 2, Rn = Math.min(gg.pw, gg.ph) * 0.26, rb = Math.max(px(st, 1.6), Rn / Math.sqrt(A) * 0.95), m = st.m, out = ease((u - 0.3) / 0.7), dir = st.dir || [1, 0], last = ci >= chain.length - 1;
-      var isEm = {}; em.forEach(function (i) { isEm[i] = true; });
-      var cen = [0, 0]; if (m === 'a' && em.length) { em.forEach(function (i) { cen[0] += nuc.pts[i].x / em.length; cen[1] += nuc.pts[i].y / em.length; }); }
-      nuc.pts.forEach(function (p, i) {
-        var x = p.x, y = p.y, isP = p.p;
-        if (!last && isEm[i]) {
-          if (m === 'a') { var cl = Math.min(1, out * 3), tx = cen[0] + (x - cen[0]) * 0.35, ty = cen[1] + (y - cen[1]) * 0.35; x += (tx - x) * cl + dir[0] * out * 1.6; y += (ty - y) * cl + dir[1] * out * 1.6; }
-          else if (out > 0.25) isP = m === 'b-';
-        }
-        c.fillStyle = isP ? ROPE : BLUE; c.strokeStyle = DEEP; c.lineWidth = px(st, 0.8); c.beginPath(); c.arc(pcx + x * Rn, pcy + y * Rn, rb, 0, 7); c.fill(); c.stroke();
+      // the nucleus, drawn back to front as shaded spheres in perspective
+      var m = st.m, last = ci >= chain.length - 1, out = ease((u - 0.3) / 0.7), dir = st.dir || [1, 0];
+      var pcx = gg.px0 + gg.pw / 2, pcy = gg.py0 + gg.ph / 2, sc = Math.min(gg.pw, gg.ph) * 0.3 / Math.cbrt(240 / 0.62), Rb = Math.cbrt(Math.max(4, nucs.length) / 0.62), D = 9;
+      var alpha = fade * (last ? 1 - ease((u - 0.8) / 0.2) : 1), list = [];
+      nucs.forEach(function (q) {
+        var p3, a = 1;
+        if (q.out) { var cl = Math.min(1, out * 3), cn = st.cen, fly = out * 1.9 * Rb;
+          p3 = [q.out[0] + (cn[0] + (q.out[0] - cn[0]) * 0.55 - q.out[0]) * cl + dir[0] * fly, q.out[1] + (cn[1] + (q.out[1] - cn[1]) * 0.55 - q.out[1]) * cl + dir[1] * fly, q.out[2] + (cn[2] - q.out[2]) * cl];
+          a = 1 - ease((out - 0.7) / 0.3); }
+        else p3 = cam(q);
+        list.push([p3, q.t, a]);
       });
-      if (!last && (m === 'b-' || m === 'b+') && out > 0.25 && em.length) {
-        var o = nuc.pts[em[0]], f = (out - 0.25) / 0.75, ex = pcx + (o.x + dir[0] * f * 2.2) * Rn, ey = pcy + (o.y + dir[1] * f * 2.2) * Rn;
-        c.fillStyle = m === 'b-' ? GOLD : '#ff8a5c'; c.beginPath(); c.arc(ex, ey, Math.max(px(st, 3), rb * 0.6), 0, 7); c.fill(); text(st, m === 'b-' ? 'e⁻' : 'e⁺', ex + px(st, 8), ey - px(st, 6), m === 'b-' ? GOLD : '#ff8a5c');
-        var vx = pcx + (o.x - dir[1] * f * 2.2) * Rn, vy = pcy + (o.y + dir[0] * f * 2.2) * Rn; c.strokeStyle = 'rgba(234,246,248,.6)'; c.lineWidth = px(st, 1); c.beginPath(); c.arc(vx, vy, px(st, 3), 0, 7); c.stroke(); text(st, m === 'b-' ? 'ν̄' : 'ν', vx + px(st, 7), vy + px(st, 4), MIST);
+      list.sort(function (A2, B2) { return A2[0][2] - B2[0][2]; });
+      list.forEach(function (L) {
+        var p3 = L[0], s = D / (D - p3[2] / Rb * 2.2), X = pcx + p3[0] * sc * s, Y = pcy + p3[1] * sc * s, r = sc * s * 1.02;
+        var base = [RC.n[0] + (RC.p[0] - RC.n[0]) * L[1], RC.n[1] + (RC.p[1] - RC.n[1]) * L[1], RC.n[2] + (RC.p[2] - RC.n[2]) * L[1]];
+        var lit = 0.72 + 0.28 * Math.max(-1, Math.min(1, p3[2] / Rb)), gr = c.createRadialGradient(X - r * 0.38, Y - r * 0.42, r * 0.08, X, Y, r);
+        gr.addColorStop(0, shade(tint(base, 0.55), lit)); gr.addColorStop(0.5, shade(base, lit * 0.92)); gr.addColorStop(1, shade(base, lit * 0.38));
+        c.globalAlpha = alpha * L[2]; c.fillStyle = gr; c.beginPath(); c.arc(X, Y, r, 0, 7); c.fill();
+      });
+      c.globalAlpha = alpha;
+      if (!last && (m === 'b-' || m === 'b+') && st.left && st.from) {
+        var o = st.from, f = ease((u - 0.3) / 0.7), fa = 1 - ease((f - 0.75) / 0.25), ex = pcx + (o[0] + dir[0] * f * 1.7 * Rb) * sc, ey = pcy + (o[1] + dir[1] * f * 1.7 * Rb) * sc, ec = m === 'b-' ? GOLD : '#ff8a5c';
+        c.globalAlpha = alpha * fa; c.fillStyle = ec; c.beginPath(); c.arc(ex, ey, Math.max(px(st, 3), sc * 0.6), 0, 7); c.fill(); text(st, m === 'b-' ? 'e⁻' : 'e⁺', ex + px(st, 8), ey - px(st, 6), ec);
+        var vx = pcx + (o[0] - dir[1] * f * 1.7 * Rb) * sc, vy = pcy + (o[1] + dir[0] * f * 1.7 * Rb) * sc; c.strokeStyle = 'rgba(234,246,248,.6)'; c.lineWidth = px(st, 1); c.beginPath(); c.arc(vx, vy, px(st, 3), 0, 7); c.stroke(); text(st, m === 'b-' ? 'ν̄' : 'ν', vx + px(st, 7), vy + px(st, 4), MIST);
       }
-      if (!last && m === 'a' && out > 0.2) { text(st, 'α', pcx + (cen[0] + dir[0] * out * 1.6) * Rn + px(st, 14), pcy + (cen[1] + dir[1] * out * 1.6) * Rn, GOLD, 'left', 13); }
-      text(st, nm(nuc.z, nuc.n), pcx, gg.py0 + px(st, 24), FOAM, 'center', 14);
-      text(st, nuc.z + ' protons, ' + nuc.n + ' neutrons', pcx, gg.py0 + px(st, 42), MIST, 'center');
+      if (!last && m === 'a' && st.left && st.cen) { c.globalAlpha = alpha * (1 - ease((out - 0.7) / 0.3)); text(st, 'α', pcx + (st.cen[0] + dir[0] * out * 1.9 * Rb) * sc + px(st, 16), pcy + (st.cen[1] + dir[1] * out * 1.9 * Rb) * sc, GOLD, 'left', 13); }
+      c.globalAlpha = 1;
+      text(st, nm(nz, nn), pcx, gg.py0 + px(st, 24), FOAM, 'center', 14);
+      text(st, nz + ' protons, ' + nn + ' neutrons', pcx, gg.py0 + px(st, 42), MIST, 'center');
       text(st, last ? 'stable' : m === 'a' ? 'α decay: emits ⁴He' : m === 'b-' ? 'β⁻: n → p + e⁻ + ν̄' : 'β⁺: p → n + e⁺ + ν', pcx, gg.py0 + gg.ph - px(st, 16), last ? FOAM : 'rgb(' + COL[m].join(',') + ')', 'center', 12);
       read(chain.map(function (q, i) { return (i ? ' →' + SYM[mode[chain[i - 1][0] + ',' + chain[i - 1][1]]] + ' ' : '') + nm(q[0], q[1]); }).join('') + (chain.length > 1 ? ' (stable).' : ' is stable.'));
     };

@@ -484,7 +484,7 @@
       render();
       raf = requestAnimationFrame(frame);
     }
-    if (reduce) { ph = 0.62; render(); return; }
+    if (reduce) { ph = 0.25; render(); return; }
     whenVisible(strokeCv, function () { if (!raf) { last = 0; raf = requestAnimationFrame(frame); } }, function () { cancelAnimationFrame(raf); raf = 0; });
     window.addEventListener('resize', function () { G = null; render(); });
     render();
