@@ -39,12 +39,8 @@
 
   function text(c, s, x, y, o) {
     o = o || {};
-    ga(c, o.alpha);
-    c.font = (o.weight || 400) + ' ' + (o.size || 12) + 'px ' + MONO;
-    c.fillStyle = o.color || MIST;
-    c.textAlign = o.align || 'left';
-    c.textBaseline = o.base || 'alphabetic';
-    c.fillText(s, x, y);
+    // drawn by Viz.text, which fits labels to o.fit and keeps them inside the canvas
+    window.Viz.text(c, s, x, y, Object.assign({}, o, { alpha: BASE * (o.alpha == null ? 1 : o.alpha) }));
   }
   function cellFill(v, scale, k) {
     var inten = Math.min(1, Math.abs(v) / (scale || 1));
@@ -67,7 +63,7 @@
     if (o.label !== false && Math.min(wd, ht) > 15) {
       var fs = Math.max(8, Math.min(13, Math.min(wd * 0.26, ht * 0.4)));
       text(c, o.fmt ? o.fmt(v) : num(v, 2, wd), x + wd / 2, y + ht / 2 + 0.5,
-        { size: fs, color: FOAM, align: 'center', base: 'middle', weight: 500, alpha: a * (o.textAlpha == null ? 1 : o.textAlpha) });
+        { size: fs, color: FOAM, align: 'center', base: 'middle', weight: 500, fit: wd - 4, alpha: a * (o.textAlpha == null ? 1 : o.textAlpha) });
     }
   }
   function num(v, d, wd) {
@@ -98,7 +94,7 @@
     brackets(c, x, y, cols * cs, rows * cs, o.alpha);
     if (o.label) text(c, o.label, x + cols * cs / 2, y - (o.heads ? 22 : 8), { size: 12, color: FOAM, align: 'center', weight: 500, alpha: o.alpha });
     if (o.heads) {
-      for (j = 0; j < cols; j++) text(c, NAMES[j], x + j * cs + cs / 2, y - 6, { size: 10, align: 'center', alpha: o.alpha });
+      for (j = 0; j < cols; j++) text(c, NAMES[j], x + j * cs + cs / 2, y - 6, { size: 10, align: 'center', alpha: o.alpha, fit: cs - 3 });
       for (i = 0; i < rows; i++) text(c, NAMES[i], x - 8, y + i * cs + cs / 2, { size: 10, align: 'right', base: 'middle', alpha: o.alpha });
     }
   }
@@ -535,7 +531,7 @@
       var sx = B.x0 + (WIN - 1) * B.cw, sy = B.y0 + k * B.ch;
       var x0 = lerp(sx, E.x, a), y0 = lerp(sy, E.y + k * cs, a), cw0 = lerp(B.cw, cs, a), ch0 = lerp(B.ch, cs, a);
       if (e <= 0) cell(c, x0, y0, cw0, ch0, XT[k], { scale: 2.2, label: a > 0.6 });
-      else for (var j = D - 1; j >= 0; j--) cell(c, E.x + j * cs * e, y0, cs, cs, lerp(XT[k], EMB[k][j], e), { scale: lerp(2.2, 1.5, e), alpha: j === 0 ? 1 : e });
+      else for (var j = D - 1; j >= 0; j--) cell(c, E.x + j * cs * e, y0, cs, cs, lerp(XT[k], EMB[k][j], e), { scale: lerp(2.2, 1.5, e), alpha: j === 0 ? 1 : e, label: e > 0.97 || j === 0 });
       text(c, FSHORT[k], E.x - 8, E.y + k * cs + cs / 2, { size: 10, align: 'right', base: 'middle', alpha: a });
     }
     text(c, e > 0.5 ? 'embeddings e⁽ᵏ⁾' : 'xₜ', E.x + (e > 0.5 ? 2 * cs : cs / 2), E.y - 10, { size: 12, color: FOAM, align: 'center', weight: 500, alpha: a });

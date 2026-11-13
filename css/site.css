@@ -1019,6 +1019,11 @@ img, canvas, svg { display: block; max-width: 100%; }
 .rec-fig .deg { font-size: 9.5px; opacity: 0.7; }
 .rec-fig .city { font: 600 12px var(--body); fill: var(--foam); }
 .rec-fig .yrs { font-size: 10.5px; fill: #ffd166; }
+.rec-fig .city, .rec-fig .yrs { paint-order: stroke; stroke: var(--deep); stroke-width: 3px; stroke-linejoin: round; }
+.rec-fig .land { fill: rgba(143, 177, 189, 0.08); }
+.rec-fig .states { fill: none; stroke: rgba(143, 177, 189, 0.16); stroke-width: 0.6; }
+.rec-fig .coast { fill: none; stroke: rgba(143, 177, 189, 0.42); stroke-width: 0.8; stroke-linejoin: round; }
+.rec-fig .region { font: 500 8.5px var(--mono); letter-spacing: 0.22em; fill: var(--mist); opacity: 0.45; }
 .rec-fig .trace { stroke-dasharray: 1000; stroke-dashoffset: 1000; }
 .rec-fig .flight { fill: none; stroke: #ff8fb8; stroke-width: 1.6; stroke-dasharray: 1; stroke-dashoffset: 1; opacity: 0.85; }
 .rec-fig .pt { opacity: 0; }
@@ -1109,7 +1114,7 @@ img, canvas, svg { display: block; max-width: 100%; }
 .focus .t-edge { stroke-opacity: 0.08; }
 .focus .t-edge.on { stroke-opacity: 1; stroke-width: 2.2; stroke-dashoffset: 0 !important; }
 .t-now { stroke: var(--rope); stroke-width: 1; stroke-dasharray: 3 4; opacity: 0.7; }
-.t-nowtag { font: 500 10.5px var(--mono); fill: var(--rope); text-anchor: end; }
+.t-nowtag { font: 500 10.5px var(--mono); fill: var(--rope); text-anchor: end; paint-order: stroke; stroke: var(--deep); stroke-width: 5px; stroke-linejoin: round; }
 .tree-read {
   position: sticky; bottom: calc(12px + env(safe-area-inset-bottom, 0px)); z-index: 4; margin-top: 10px; padding: 10px 14px;
   border: 1px solid var(--line); border-radius: 6px; background: color-mix(in srgb, var(--deep) 92%, transparent);
@@ -1121,11 +1126,12 @@ img, canvas, svg { display: block; max-width: 100%; }
 .tree-read .chip { margin-left: 6px; padding: 2px 10px; font-size: 0.75rem; }
 
 /* scroll gauges standing in for sliders */
-.drive { display: inline-flex; align-items: center; gap: 10px; }
+.drive { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; max-width: 100%; }
 .drive .track { position: relative; width: clamp(90px, 16vw, 150px); height: 4px; border-radius: 2px; background: var(--line); }
 .drive .track i { position: absolute; inset: 0 auto 0 0; width: calc(var(--p, 0) * 100%); border-radius: 2px; background: var(--c, var(--accent)); }
 .drive .track i::after { content: ""; position: absolute; right: -5px; top: -3px; width: 10px; height: 10px; border-radius: 50%; background: var(--c, var(--accent)); }
 .drive output { min-width: 7em; color: var(--foam); }
+@media (max-width: 420px) { .drive output { min-width: 0; } }
 .drive .how { padding: 1px 7px; border: 1px solid var(--line); border-radius: 9px; font-size: 0.68rem; color: var(--mist); }
 .drive .how::before { content: "\2195\00a0"; }
 .demo canvas { touch-action: pan-y; }
@@ -1141,3 +1147,6 @@ img, canvas, svg { display: block; max-width: 100%; }
 .dtab[aria-selected="true"] { color: var(--deep); background: var(--c); border-color: var(--c); }
 .dpanel .demo { margin-top: 18px; }
 .demo-controls .hint { color: var(--mist); }
+
+/* keyboard shortcut hints mean nothing on touch screens */
+@media (hover: none) and (pointer: coarse) { .kbd-hint { display: none; } }

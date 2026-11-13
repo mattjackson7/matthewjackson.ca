@@ -61,10 +61,29 @@
   function text(c, s, x, y, o) {
     o = o || {};
     ga(c, o.alpha);
-    c.font = (o.weight || 400) + ' ' + (o.size || 12) + 'px ' + MONO;
+    var size = o.size || 12;
+    c.font = (o.weight || 400) + ' ' + size + 'px ' + MONO;
     c.fillStyle = o.color || MIST;
     c.textAlign = o.align || 'left';
     c.textBaseline = o.base || 'alphabetic';
+    // o.fit: the widest the text may be; shrink to fit, and skip it if it would be unreadably small
+    if (o.fit) {
+      var tw = c.measureText(s).width;
+      if (tw > o.fit) { size = size * o.fit / tw; if (size < 5.5) return; c.font = (o.weight || 400) + ' ' + size.toFixed(2) + 'px ' + MONO; }
+    }
+    // keep every label inside the canvas: on narrow screens, slide it back in from the edge
+    var m = c.getTransform && c.getTransform();
+    if (m && !m.b && !m.c && m.a > 0 && o.keepIn !== false) {
+      var mt = c.measureText(s), L = x - mt.actualBoundingBoxLeft, R = x + mt.actualBoundingBoxRight;
+      var X0 = -m.e / m.a + 2, X1 = (c.canvas.width - m.e) / m.a - 2;
+      if (R - L > X1 - X0) {  // wider than the whole canvas: shrink it to fit
+        size = size * (X1 - X0) / (R - L) * 0.98;
+        if (size < 5.5) return;
+        c.font = (o.weight || 400) + ' ' + size.toFixed(2) + 'px ' + MONO;
+        mt = c.measureText(s); L = x - mt.actualBoundingBoxLeft; R = x + mt.actualBoundingBoxRight;
+      }
+      if (R - L < X1 - X0) { if (L < X0) x += X0 - L; else if (R > X1) x -= R - X1; }
+    }
     c.fillText(s, x, y);
   }
   function line(c, x0, y0, x1, y1, color, o) {

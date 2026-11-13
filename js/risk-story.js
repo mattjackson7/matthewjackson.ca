@@ -180,7 +180,7 @@
     if (o.stroke) { c.strokeStyle = o.stroke; c.lineWidth = o.lw || 1.8; c.strokeRect(x + g / 2 + 0.5, y + g / 2 + 0.5, wd - g - 1, ht - g - 1); }
     if (o.label !== false && Math.min(wd, ht) > 14) {
       var fs = Math.max(8, Math.min(14, Math.min(wd * 0.27, ht * 0.4)));
-      text(c, o.fmt ? o.fmt(v) : fmtNum(v, 2, wd), x + wd / 2, y + ht / 2 + 0.5, { size: fs, color: FOAM, align: 'center', base: 'middle', weight: 500, alpha: a * (o.textAlpha == null ? 1 : o.textAlpha) });
+      text(c, o.fmt ? o.fmt(v) : fmtNum(v, 2, wd), x + wd / 2, y + ht / 2 + 0.5, { size: fs, color: FOAM, align: 'center', base: 'middle', weight: 500, fit: wd - 4, alpha: a * (o.textAlpha == null ? 1 : o.textAlpha) });
     }
   }
   function brackets(c, x, y, wd, ht, a) {
@@ -204,7 +204,7 @@
         c.strokeStyle = 'rgba(143,177,189,0.16)';
         c.lineWidth = 1;
         c.strokeRect(cx + 1.5, cy + 1.5, cs - 3, cs - 3);
-        if (o.blank && o.blank(i, j)) { text(c, '0', cx + cs / 2, cy + cs / 2 + 0.5, { size: Math.max(8, cs * 0.25), color: 'rgba(143,177,189,0.45)', align: 'center', base: 'middle', alpha: al }); continue; }
+        if (o.blank && o.blank(i, j)) { text(c, '0', cx + cs / 2, cy + cs / 2 + 0.5, { size: Math.max(8, cs * 0.25), color: 'rgba(143,177,189,0.45)', align: 'center', base: 'middle', alpha: al, fit: cs - 4 }); continue; }
         var show = o.show ? o.show(i, j) : 1;
         if (show > 0) cellAt(c, cx, cy, cs, cs, M[i][j], { scale: o.scale, alpha: al * show, fmt: o.fmt ? function (v) { return o.fmt(v, i, j); } : function (v) { return fmtNum(v, 2, cs); }, textAlpha: o.textAlpha ? o.textAlpha(i, j) : 1 });
         var hl = o.hi && o.hi(i, j);
@@ -214,8 +214,8 @@
     brackets(c, x, y, cols * cs, rows * cs, al);
     var fs = Math.max(8, Math.min(14, cs * 0.27));
     if (o.heads) {
-      for (j = 0; j < cols; j++) text(c, NAMES[j], x + j * cs + cs / 2, y - 4, { size: Math.max(8, fs * 0.85), align: 'center', base: 'bottom', alpha: al });
-      for (i = 0; i < rows; i++) text(c, NAMES[i], x - 8, y + i * cs + cs / 2, { size: Math.max(8, fs * 0.85), align: 'right', base: 'middle', alpha: al });
+      for (j = 0; j < cols; j++) text(c, NAMES[j], x + j * cs + cs / 2, y - 4, { size: Math.max(8, fs * 0.85), align: 'center', base: 'bottom', alpha: al, fit: cs - 3 });
+      if (cs >= 10) for (i = 0; i < rows; i++) text(c, NAMES[i], x - 8, y + i * cs + cs / 2, { size: Math.min(Math.max(8, fs * 0.85), cs * 0.8), align: 'right', base: 'middle', alpha: al });
     }
     if (o.label) text(c, o.label, x + cols * cs / 2, y - (o.heads ? fs + 10 : 7), { size: Math.max(10, fs), color: o.labelColor || FOAM, align: 'center', base: 'bottom', weight: 500, alpha: al });
   }
@@ -551,7 +551,7 @@
           var x = lerp(lerp(xX, xX + 1.1 * cs, mul), xS, mrg), y = lerp(top + i * cs, top + 1.5 * cs, mrg);
           cellAt(c, x, y, cs, cs, lerp(XS[k][i], XS[k][i] * WT[i], mul), { scale: 6, alpha: 1 - mrg, fmt: f2d });
           cellAt(c, lerp(xW, xX + 1.1 * cs, mul), top + i * cs, cs, cs, WT[i], { scale: 0.5, alpha: 1 - mul, fmt: f2d });
-          text(c, NAMES[i], xX - 8, top + i * cs + cs / 2, { size: 10, align: 'right', base: 'middle', alpha: 1 - mrg });
+          if (cs >= 10) text(c, NAMES[i], xX - 8, top + i * cs + cs / 2, { size: Math.min(10, cs * 0.8), align: 'right', base: 'middle', alpha: 1 - mrg });
         }
         text(c, 'X' + sub(k + 1) + ' (%)', xX + cs / 2, top - 8, { size: 11, color: FOAM, align: 'center', weight: 500, alpha: 1 - mul });
         text(c, 'w', xW + cs / 2, top - 8, { size: 11, color: FOAM, align: 'center', weight: 500, alpha: 1 - mul });
@@ -607,7 +607,7 @@
         var xe = lerp(box.x, X(xq), Math.min(1, a * 2)), ye = Y(q);
         V.line(c, box.x, ye, xe, ye, col, { width: 1.6, alpha: Math.min(1, a * 3) });
         if (a > 0.5) { V.line(c, X(xq), ye, X(xq), lerp(ye, box.y + box.h, (a - 0.5) * 2), col, { width: 1.6 }); }
-        if (a > 0.95) text(c, 'VaR' + (q === 0.01 ? '₉₉' : '₉₅') + ' = ' + pct(-xq), X(xq) + 6, box.y + box.h - 8, { size: 11, color: col, weight: 500 });
+        if (a > 0.95) text(c, 'VaR' + (q === 0.01 ? '₉₉' : '₉₅') + ' = ' + pct(-xq), X(xq) + 6, box.y + box.h - 8 - (q === 0.05 ? 15 : 0), { size: 11, color: col, weight: 500 });
       }
       if (read > 0) readAt(0.01, ACC, read);
       if (five > 0) readAt(0.05, FOAM, five);

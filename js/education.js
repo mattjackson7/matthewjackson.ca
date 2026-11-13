@@ -249,7 +249,8 @@
       var inside = ys > 0 && ys < H - 8 && !reduce;
       nowLine.setAttribute('y1', inside ? ys : -10); nowLine.setAttribute('y2', inside ? ys : -10);
       var ti = 0; for (var i = 0; i < rowY.length; i++) if (ys >= rowY[i].top) ti = i;
-      nowTag.setAttribute('y', inside ? ys - 5 : -10); nowTag.textContent = inside ? termLong(TERMS[ti]) : '';
+      if (svg.lastChild !== nowTag) svg.appendChild(nowTag);
+      nowTag.setAttribute('y', inside ? (ys < 16 ? ys + 13 : ys - 5) : -10); nowTag.textContent = inside ? termLong(TERMS[ti]) : '';
     }
     onScroll(update);
     window.addEventListener('resize', function () { if (host.clientWidth !== lastW) build(); });
@@ -305,7 +306,19 @@
   }
   function px(st, n) { return n * st.d; }
   function font(st, n, w) { return (w || 400) + ' ' + n * st.d + 'px ' + MONO; }
-  function text(st, s, x, y, col, align, n) { var c = st.ctx; c.fillStyle = col || MIST; c.font = font(st, n || 11); c.textAlign = align || 'left'; c.fillText(s, x, y); }
+  // every label stays inside its canvas: too wide and it shrinks, near an edge and it slides back in
+  function text(st, s, x, y, col, align, n) {
+    var c = st.ctx, sz = n || 11; c.fillStyle = col || MIST; c.font = font(st, sz); c.textAlign = align || 'left';
+    var m = c.getTransform ? c.getTransform() : null;
+    if (m && m.a === 1 && m.d === 1 && !m.b && !m.c && !m.e && !m.f && st.W) {
+      var mt = c.measureText(s), L = x - mt.actualBoundingBoxLeft, R = x + mt.actualBoundingBoxRight, lo = 2 * st.d, hi = st.W - 2 * st.d;
+      if (R - L > hi - lo) { sz *= (hi - lo) / (R - L) * 0.98; c.font = font(st, sz); mt = c.measureText(s); L = x - mt.actualBoundingBoxLeft; R = x + mt.actualBoundingBoxRight; }
+      if (L < lo) x += lo - L; else if (R > hi) x -= R - hi;
+      var T = y - mt.actualBoundingBoxAscent, B = y + mt.actualBoundingBoxDescent;
+      if (T < 1) y += 1 - T; else if (B > st.H - 1) y -= B - st.H + 1;
+    }
+    c.fillText(s, x, y);
+  }
   function chips(sel, attr, cb) {
     var bs = document.querySelectorAll(sel);
     Array.prototype.forEach.call(bs, function (b) {

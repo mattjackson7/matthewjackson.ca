@@ -85,7 +85,7 @@
       c.strokeStyle = ROPE; c.lineWidth = px(st, 4); c.beginPath(); for (i = 0; i <= 120; i++) { var u = i / 120; X = x0 + u * (x1 - x0); Y = deckY + y(u) * amp; i ? c.lineTo(X, Y) : c.moveTo(X, Y); } c.stroke();
       text(st, 'waves push this pier', pier + px(st, 8), water + px(st, 20), GOLD);
       // response spectrum
-      var b = H - px(st, 26), top = H * 0.62, gx = px(st, 40), gw = W - px(st, 80);
+      var b = H - px(st, 26), top = Math.max(H * 0.62, water + px(st, 46)), gx = px(st, 40), gw = W - px(st, 80);
       axes(st, gx, b, gx + gw, b);
       c.strokeStyle = BLUE; c.lineWidth = px(st, 2); c.beginPath(); for (i = 0; i <= 400; i++) { var ww = 0.3 + 4.9 * i / 400; X = gx + i / 400 * gw; Y = b - Math.min(1, total(ww) / big) * (b - top); i ? c.lineTo(X, Y) : c.moveTo(X, Y); } c.stroke();
       c.fillStyle = ROPE; c.beginPath(); c.arc(gx + (ws - 0.3) / 4.9 * gw, b - Math.min(1, total(ws) / big) * (b - top), px(st, 6), 0, 7); c.fill();
@@ -274,9 +274,10 @@
         oc.putImageData(img, 0, 0);
         var x0 = gap + k * (sz + gap), y0 = px(st, 34); c.imageSmoothingEnabled = true; c.drawImage(o, x0, y0, sz, sz);
         c.setLineDash([px(st, 3), px(st, 4)]); c.strokeStyle = 'rgba(255,106,85,.6)'; c.lineWidth = px(st, 1); c.beginPath(); c.moveTo(x0, y0 + sz); c.lineTo(x0 + sz, y0); c.stroke(); c.setLineDash([]);
-        text(st, name, x0, px(st, 22), [FOAM, GOLD, BLUE][k], 'left', 12);
+        var tight = sz < px(st, 130);
+        text(st, name, x0, px(st, 22), [FOAM, GOLD, BLUE][k], 'left', tight ? 10 : 12);
         probs[k] = close[k] / tot[k];
-        text(st, 'close together: ' + Math.round(probs[k] * 100) + '%', x0, y0 + sz + px(st, 18), MIST);
+        text(st, (tight ? 'close: ' : 'close together: ') + Math.round(probs[k] * 100) + '%', x0, y0 + sz + px(st, 18), MIST);
       });
       text(st, 'x₁ →', gap + sz, px(st, 34) + sz + px(st, 34), MIST, 'right');
       read('Particles in levels ' + a + ' and ' + b + ' (each mixed with the next level up). Chance of being within 0.6 of each other: ' + Math.round(probs[0] * 100) + '% if distinguishable, ' + Math.round(probs[1] * 100) + '% as bosons, ' + Math.round(probs[2] * 100) + '% as fermions. Scroll for other levels.');

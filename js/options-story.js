@@ -298,7 +298,8 @@
       var n2 = V.N(B0.d2), n1now = 1 - V.N(cut - shift);
       V.text(c, 'N(d₂) = ' + n2.toFixed(4) + '  (probability of exercise)', box.x, box.y + box.h + 34, { size: 12, color: FOAM, alpha: a });
       V.text(c, (sh < 1 ? 'shifting: ' : 'N(d₁) = ') + n1now.toFixed(4) + '  (same region, share measure)', box.x, box.y + box.h + 56, { size: 12, color: ACC, alpha: sh });
-      var disc = K * Math.exp(-R * T), fs = V.clamp(w / 44, 11, 15), ly = box.y + box.h + 92;
+      var disc = K * Math.exp(-R * T), fs = V.clamp(w / 44, 11, 15), ly = box.y + box.h + 92, gap = fs * 1.9;
+      if (ly + 2 * gap + 4 > h) { fs = Math.max(9, fs * 0.85); gap = fs * 1.5; ly = Math.max(box.y + box.h + 56 + gap, Math.min(ly, h - 4 - 2 * gap)); }
       var lines = [
         'C = S·N(d₁) − K e⁻ʳᵀ·N(d₂)',
         '  = ' + S0 + ' × ' + V.N(B0.d1).toFixed(4) + ' − ' + disc.toFixed(2) + ' × ' + n2.toFixed(4) + ' = ' + B0.call.toFixed(3),
@@ -306,7 +307,7 @@
       ];
       lines.forEach(function (ln, j) {
         var al = V.ease(V.seg(fm, j * 0.3, j * 0.3 + 0.28));
-        V.text(c, ln, box.x, ly + j * fs * 1.9, { size: fs, color: j === 1 ? ACC : j === 2 ? MIST : FOAM, weight: j === 1 ? 500 : 400, alpha: al });
+        V.text(c, ln, box.x, ly + j * gap, { size: fs, color: j === 1 ? ACC : j === 2 ? MIST : FOAM, weight: j === 1 ? 500 : 400, alpha: al });
       });
     }
   ];
@@ -410,7 +411,7 @@
     // 2.5 convergence to BSM as the number of steps grows
     function (c, w, h, p) {
       var nShow = Math.max(2, Math.round(V.ease(V.seg(p, 0, 0.85)) * CONV.length));
-      var box = { x: 46, y: 30, w: w - 76, h: h * 0.5 };
+      var short = h < 340, box = { x: 46, y: 30, w: w - 76, h: h * (short ? 0.4 : 0.5) };
       var F = V.frame(c, box, [1, CONV.length], [B0.call - 1.2, B0.call + 1.2], { xticks: [1, 40, 80, 120, 160], yticks: [Math.round(B0.call - 1), Math.round(B0.call), Math.round(B0.call + 1)], xlabel: 'steps N' });
       V.line(c, box.x, F.Y(B0.call), box.x + box.w, F.Y(B0.call), FOAM, { dash: [4, 4], alpha: 0.7 });
       V.text(c, 'BSM ' + B0.call.toFixed(3), box.x + box.w, F.Y(B0.call) - 6, { size: 10, color: FOAM, align: 'right' });
@@ -421,8 +422,8 @@
       for (var k2 = 0; k2 < nShow; k2++) { var x = F.X(k2 + 1), y = F.Y(V.clamp(CONV[k2], B0.call - 1.2, B0.call + 1.2)); if (k2) c.lineTo(x, y); else c.moveTo(x, y); }
       c.stroke();
       // the error on log axes, against a slope of -1
-      var eb = { x: 46, y: box.y + box.h + 50, w: w - 76, h: h - box.y - box.h - 80 };
-      var E = V.frame(c, eb, [1, 160], [1e-3, 3], { logX: true, logY: true, xticks: [1, 10, 100], yticks: [0.001, 0.01, 0.1, 1], yfmt: function (t) { return String(t); }, ylabel: '|tree − BSM|' });
+      var eb = { x: 46, y: box.y + box.h + (short ? 40 : 50), w: w - 76, h: h - box.y - box.h - (short ? 66 : 80) };
+      var E = V.frame(c, eb, [1, 160], [1e-3, 3], { logX: true, logY: true, xticks: [1, 10, 100], yticks: eb.h < 70 ? [0.001, 1] : [0.001, 0.01, 0.1, 1], yfmt: function (t) { return String(t); }, ylabel: '|tree − BSM|' });
       V.ga(c, 0.9);
       c.fillStyle = ACC;
       for (k2 = 0; k2 < nShow; k2++) { var er = Math.abs(CONV[k2] - B0.call); if (er > 1e-3) c.fillRect(E.X(k2 + 1) - 1, E.Y(er) - 1, 2, 2); }

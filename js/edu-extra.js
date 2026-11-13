@@ -14,13 +14,13 @@
     onScroll(function () { var p = progress(st.cv), k = Math.min(255, Math.floor(p * 256)); if (k !== lastK) { lastK = k; A = (k * 7 + 3) % 16; B = (k * 11 + 5) % 16; t = 0; } g(p, A + ' + ' + B); });
     st.frame = function (dt) { t += dt; };
     st.draw = function () {
-      clear(st); var c = st.ctx, W = st.W, H = st.H, n = 4, bw = Math.min(W / 6, px(st, 140)), gap = (W - n * bw) / (n + 1), y0 = H * 0.36, bh = H * 0.24;
+      clear(st); var c = st.ctx, W = st.W, H = st.H, n = 4, bw = Math.min(W / 6, px(st, 140)), narrow = bw < px(st, 84), lm = narrow ? px(st, 44) : 0, gap = (W - n * bw - lm) / (n + (narrow ? 0 : 1)), y0 = Math.max(H * 0.36, px(st, 112)), bh = Math.max(H * 0.24, px(st, 44));
       var carry = [0], sum = [];
       for (var i = 0; i < n; i++) { var a = A >> i & 1, b = B >> i & 1, ci = carry[i]; sum.push(a ^ b ^ ci); carry.push((a & b) | (ci & (a ^ b))); }
       for (i = 0; i < n; i++) {
         var x = W - gap - (i + 1) * bw - i * gap, ready = t > 0.5 + i * 0.6, a2 = A >> i & 1, b2 = B >> i & 1;
         c.fillStyle = ready ? 'rgba(255,138,92,.2)' : 'rgba(143,177,189,.08)'; c.strokeStyle = ready ? ORANGE : MIST; c.lineWidth = px(st, 2); c.fillRect(x, y0, bw, bh); c.strokeRect(x, y0, bw, bh);
-        text(st, 'full adder', x + bw / 2, y0 + bh / 2 + px(st, 4), MIST, 'center');
+        text(st, narrow ? 'FA' : 'full adder', x + bw / 2, y0 + bh / 2 + px(st, 4), MIST, 'center');
         [[a2, x + bw * 0.3, 'A' + i], [b2, x + bw * 0.7, 'B' + i]].forEach(function (q) { c.strokeStyle = q[0] ? GOLD : 'rgba(143,177,189,.4)'; c.lineWidth = px(st, 3); line(c, [[q[1], y0 - px(st, 50)], [q[1], y0]]); c.stroke();
           text(st, String(q[0]), q[1], y0 - px(st, 58), q[0] ? GOLD : MIST, 'center', 15); text(st, q[2], q[1], y0 - px(st, 78), MIST, 'center'); });
         var sOn = ready && sum[i]; c.strokeStyle = sOn ? GOLD : 'rgba(143,177,189,.4)'; line(c, [[x + bw / 2, y0 + bh], [x + bw / 2, y0 + bh + px(st, 44)]]); c.stroke();
@@ -30,7 +30,7 @@
         if (t > 0.5 + i * 0.6 && t < 0.8 + i * 0.6 + 0.3 && carry[i + 1]) { var f = Math.min(1, (t - 0.5 - i * 0.6) / 0.3); c.fillStyle = ROPE; c.beginPath(); c.arc(cx0 + (cx1 - cx0) * f, y0 + bh / 2, px(st, 5), 0, 7); c.fill(); }
       }
       var done = t > 0.5 + n * 0.6, total = A + B, cout = carry[n];
-      text(st, 'carry out', gap * 0.5, y0 + bh / 2 - px(st, 10), MIST, 'center'); text(st, done ? String(cout) : '?', gap * 0.5, y0 + bh / 2 + px(st, 20), done && cout ? ROPE : MIST, 'center', 16);
+      if (narrow) { text(st, 'carry', lm * 0.5, y0 - px(st, 22), MIST, 'center'); text(st, 'out', lm * 0.5, y0 - px(st, 8), MIST, 'center'); } else text(st, 'carry out', gap * 0.5, y0 + bh / 2 - px(st, 10), MIST, 'center'); text(st, done ? String(cout) : '?', narrow ? lm * 0.5 : gap * 0.5, y0 + bh / 2 + px(st, narrow ? 34 : 20), done && cout ? ROPE : MIST, 'center', 16);
       var bin = function (v, w) { var s = ''; for (var i = w - 1; i >= 0; i--) s += v >> i & 1; return s; };
       text(st, bin(A, 4) + ' + ' + bin(B, 4) + ' = ' + (done ? bin(total, 5) : '…'), px(st, 12), px(st, 22), FOAM, 'left', 13);
       read(A + ' + ' + B + (done ? ' = ' + total + ' (' + bin(total, 5) + ' in binary). The carry rippled through ' + carry.slice(1).filter(Boolean).length + ' stage' + (carry.slice(1).filter(Boolean).length === 1 ? '' : 's') + '.' : ': the carry is still rippling left.') + ' Scroll for new numbers.');

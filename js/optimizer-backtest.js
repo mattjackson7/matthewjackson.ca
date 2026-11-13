@@ -101,7 +101,8 @@
 
   /* ---------- Drawing ---------- */
   function layout(w, h) {
-    return { x: 34, w: w - 110, top: { y: 28, h: h * 0.42 }, bot: { y: h * 0.42 + 64, h: h * 0.4 } };
+    var nw = w < 520;
+    return { x: 34, w: w - 110, top: { y: 28, h: h * 0.42 }, bot: { y: h * 0.42 + (nw ? 76 : 64), h: h * 0.4 - (nw ? 12 : 0) } };
   }
   function X(Ly, d) { return Ly.x + d / (DAYS - 1) * Ly.w; }
 
@@ -116,8 +117,20 @@
       c.beginPath();
       for (var t = 0; t < DAYS; t += 2) { if (t) c.lineTo(X(Ly, t), Y(p[t])); else c.moveTo(X(Ly, t), Y(p[t])); }
       c.stroke();
-      V.text(c, NAMES[i], X(Ly, DAYS - 1) + 6, Y(p[DAYS - 1]) + 4, { size: 10, color: TONES[i], alpha: alpha });
     });
+    // end labels, nudged apart so they never sit on top of each other
+    spread(PRICE.map(function (p, i) { return { y: Y(p[DAYS - 1]) + 4, i: i }; }), 12)
+      .forEach(function (l) { V.text(c, NAMES[l.i], X(Ly, DAYS - 1) + 6, l.y, { size: 10, color: TONES[l.i], alpha: alpha }); });
+  }
+  // sort labels by height and push them apart to at least gap px
+  function spread(labs, gap, maxY) {
+    labs.sort(function (a, b) { return a.y - b.y; });
+    for (var q = 1; q < labs.length; q++) if (labs[q].y - labs[q - 1].y < gap) labs[q].y = labs[q - 1].y + gap;
+    if (maxY != null && labs.length && labs[labs.length - 1].y > maxY) {
+      labs[labs.length - 1].y = maxY;
+      for (q = labs.length - 2; q >= 0; q--) labs[q].y = Math.min(labs[q].y, labs[q + 1].y - gap);
+    }
+    return labs;
   }
   // the weights over time as a stacked band, up to a given day
   function weightBand(c, Ly, upto, alpha) {
@@ -136,13 +149,18 @@
       c.closePath();
       c.fill();
     }
+    if (B.h < 40) return;  // too thin for labels: just the band
     V.text(c, 'weights, stacked to 100%', Ly.x, B.y - 8, { size: 10, alpha: alpha });
-    var w2 = WD[Math.min(TEST - 1, upto - WIN)], cum = 0;
+    var w2 = WD[Math.min(TEST - 1, upto - WIN)], cum = 0, wl = [];
     for (a = 0; a < n; a++) {
       var mid = B.y + B.h - (cum + w2[a] / 2) * B.h;
       cum += w2[a];
-      if (w2[a] > 0.06) V.text(c, NAMES[a] + ' ' + Math.round(w2[a] * 100) + '%', X(Ly, upto) + 6, mid + 4, { size: 10, color: TONES[a], alpha: alpha });
+      if (w2[a] > 0.06) wl.push({ y: mid + 4, a: a, w: w2[a] });
     }
+    // a thin band only has room for its biggest weights
+    var room = Math.max(1, Math.floor(B.h / 12) + 1);
+    if (wl.length > room) wl = wl.sort(function (p, q) { return q.w - p.w; }).slice(0, room);
+    spread(wl, 12, B.y + B.h + 2).forEach(function (l) { V.text(c, NAMES[l.a] + ' ' + Math.round(w2[l.a] * 100) + '%', X(Ly, upto) + 6, l.y, { size: 10, color: TONES[l.a], alpha: alpha }); });
   }
   function wealthLines(c, Ly, box, upto, alpha) {
     var all = WS.concat(WEW, WBH), lo = Math.min.apply(null, all), hi = Math.max.apply(null, all);
@@ -180,7 +198,7 @@
         if (rb.t > cur) return;
         V.line(c, X(Ly, rb.t), Ly.top.y + Ly.top.h + 6, X(Ly, rb.t), Ly.top.y + Ly.top.h + 14, ACC, { alpha: 0.7 });
       });
-      V.text(c, 'rebalance every 5 days', X(Ly, WIN), Ly.top.y + Ly.top.h + 28, { size: 10, color: ACC });
+      V.text(c, 'rebalance every 5 days', X(Ly, WIN), Ly.top.y + Ly.top.h + (w < 520 ? 26 : 28), { size: 10, color: ACC });
       weightBand(c, Ly, cur, 1);
     },
     // 5.2 hold each portfolio for five days and compound the results
@@ -195,9 +213,9 @@
     // 5.3 drawdowns and the metrics
     function (c, w, h, p) {
       var Ly = layout(w, h), narrow = w < 520;
-      var box = { y: 34, h: h * 0.3 };
+      var box = { y: 34, h: h * (narrow ? 0.24 : 0.3) };
       wealthLines(c, Ly, box, DAYS - 1, 1);
-      var dd = { y: box.y + box.h + 34, h: h * 0.16 }, lo = Math.min.apply(null, DS.concat(DEW));
+      var dd = { y: box.y + box.h + (narrow ? 28 : 34), h: h * (narrow ? 0.12 : 0.16) }, lo = Math.min.apply(null, DS.concat(DEW));
       var Y = function (v) { return dd.y + v / lo * dd.h; };
       var g = V.ease(V.seg(p, 0, 0.4)), upto = Math.round(g * TEST);
       V.ga(c, 0.55);
@@ -215,7 +233,7 @@
       V.text(c, (MS.mdd * 100).toFixed(1) + '% max', X(Ly, DAYS - 1) + 6, Y(MS.mdd), { size: 10, color: ACC, alpha: g });
       // the metrics, one row at a time
       var rows = [['Annual return', 'ann', true], ['Annual volatility', 'vol', true], ['Sharpe', 'sharpe'], ['Sortino', 'sortino'], ['Max drawdown', 'mdd', true], ['Calmar', 'calmar']];
-      var ty = dd.y + dd.h + 30, rh = Math.min(22, (h - ty - 8) / 7), fs = narrow ? 10 : 11;
+      var ty = dd.y + dd.h + (narrow ? 24 : 30), rh = Math.min(22, (h - ty - 8) / 7), fs = Math.min(narrow ? 10 : 11, rh * 0.78);
       var cx = narrow ? [0, w * 0.42, w * 0.62, w * 0.82] : [Ly.x, Ly.x + Ly.w * 0.42, Ly.x + Ly.w * 0.62, Ly.x + Ly.w * 0.82];
       ['', 'max-Sharpe', 'equal-wt', 'buy-hold'].forEach(function (hd, j) { V.text(c, hd, cx[j], ty, { size: fs, color: j === 1 ? ACC : MIST, weight: 500 }); });
       rows.forEach(function (r, i2) {
@@ -234,11 +252,11 @@
       var Ly = layout(w, h), a1 = V.ease(V.seg(p, 0, 0.45)), a2 = V.ease(V.seg(p, 0.5, 0.95));
       function track(y, label, col) {
         V.line(c, X(Ly, 0), y, X(Ly, DAYS - 1), y, 'rgba(143,177,189,0.5)', { width: 2 });
-        V.text(c, label, Ly.x, y - (col === RED ? 88 : 40), { size: 11, color: col, weight: 500 });
+        V.text(c, label, Ly.x, col === RED ? Math.max(14, y - 88) : Math.max(infoY + 17, y - 40), { size: 11, color: col, weight: 500, fit: w - Ly.x - 4 });
       }
       // top: one forecast, made on the test period, reused at every rebalance
-      var y1 = h * 0.3, y2 = h * 0.74;
-      track(y1, 'now: one forecast from the test period, reused everywhere', RED);
+      var sh = h < 320, y1 = h * (sh ? 0.42 : 0.3), y2 = h * (sh ? 0.82 : 0.74), infoY = y1 + (sh ? 30 : 40);
+      track(y1, w < 520 ? 'now: one test-period forecast, reused' : 'now: one forecast from the test period, reused everywhere', RED);
       var fx0 = X(Ly, DAYS - 120), fx1 = X(Ly, DAYS - 1);
       V.ga(c, 0.25);
       c.fillStyle = RED;
@@ -256,7 +274,7 @@
         c.beginPath(); c.moveTo(fx0, y1 - 12); c.quadraticCurveTo((fx0 + tx) / 2, y1 - 12 - (fx0 - tx) * 0.22, tx, y1 - 4); c.stroke();
         V.dot(c, tx, y1, 3.2, RED, { alpha: fr });
       }
-      V.text(c, 'information from the future reaches earlier dates', Ly.x, y1 + 40, { size: 10, color: RED, alpha: a1 });
+      V.text(c, 'information from the future reaches earlier dates', Ly.x, infoY, { size: 10, color: RED, alpha: a1 });
       // bottom: re-predict at each rebalance from the data to its left only
       track(y2, 'next: re-predict at every rebalance', ACC);
       shown = 0;

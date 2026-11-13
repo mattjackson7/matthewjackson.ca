@@ -211,31 +211,68 @@
     if (!road) return;
     var e = mk(road);
     while (road.firstChild) road.removeChild(road.firstChild);
-    var w = road.getBoundingClientRect().width || 400, h = 230, pad = 16;
+    var w = road.getBoundingClientRect().width || 400, h = Math.round(Math.max(230, Math.min(320, w * 0.62))), pad = 16;
     road.setAttribute('viewBox', '0 0 ' + w + ' ' + h); road.setAttribute('height', h);
     // equirectangular, with longitude squeezed by cos(latitude) so distances look right
     var LON0 = -90, LON1 = -70, LAT0 = 33.5, LAT1 = 48, k = Math.cos(41 * Math.PI / 180);
     var sx = (w - 2 * pad) / ((LON1 - LON0) * k), sy = (h - 2 * pad) / (LAT1 - LAT0), sc = Math.min(sx, sy);
     var ox = (w - (LON1 - LON0) * k * sc) / 2, oy = (h - (LAT1 - LAT0) * sc) / 2;
     var P = function (lat, lon) { return [ox + (lon - LON0) * k * sc, oy + (LAT1 - lat) * sc]; };
-    for (var lon = -88; lon <= -72; lon += 4) { var a = P(LAT0, lon), b = P(LAT1, lon); e('line', { x1: a[0], y1: a[1], x2: b[0], y2: b[1], 'class': 'grid' }); e('text', { x: a[0], y: h - 4, 'text-anchor': 'middle', 'class': 'deg' }, null, -lon + '°W'); }
-    for (var lat = 36; lat <= 46; lat += 4) { var c0 = P(lat, LON0), c1 = P(lat, LON1); e('line', { x1: c0[0], y1: c0[1], x2: c1[0], y2: c1[1], 'class': 'grid' }); e('text', { x: c0[0] + 2, y: c0[1] - 3, 'class': 'deg' }, null, lat + '°N'); }
+    // land, the Great Lakes and state lines (js/roadmap-geo.js, from Natural Earth)
+    var GEO = window.ROADMAP_GEO;
+    if (GEO) {
+      var toD = function (rings) {
+        return rings.map(function (r) {
+          return 'M' + r.split(' ').map(function (q) { var t = q.split(','), p = P(t[1] / 100, t[0] / 100); return p[0].toFixed(1) + ' ' + p[1].toFixed(1); }).join('L') + 'Z';
+        }).join('');
+      };
+      var landD = toD(GEO.land);
+      e('path', { d: landD, 'class': 'land', 'fill-rule': 'evenodd' });
+      e('path', { d: toD(GEO.states), 'class': 'states' });
+      e('path', { d: landD, 'class': 'coast' });
+    }
     var home = P(CITIES[0].lat, CITIES[0].lon);
+    // labels go wherever they fit: inside the figure and clear of every marker and earlier label
+    var taken = [[home[0] - 11, home[1] - 11, home[0] + 11, home[1] + 11]];
+    CITIES.slice(1).forEach(function (cty) { var q = P(cty.lat, cty.lon); taken.push([q[0] - 13, q[1] - 13, q[0] + 13, q[1] + 13]); });
+    function hits(b) { return taken.reduce(function (n, t) { var ox = Math.min(b[2], t[2]) - Math.max(b[0], t[0]), oy = Math.min(b[3], t[3]) - Math.max(b[1], t[1]); return n + (ox > 0 && oy > 0 ? ox * oy : 0); }, 0); }
+    function out(b) { return Math.max(0, 2 - b[0]) + Math.max(0, b[2] - (w - 2)) + Math.max(0, 2 - b[1]) + Math.max(0, b[3] - (h - 2)); }
+    function place(p, lines, g, prefer) {
+      var C = { right: [16, -1, 'start'], left: [-16, -1, 'end'], below: [0, 27, 'middle'], above: [0, -16 - 13 * (lines.length - 1), 'middle'] };
+      var order = [prefer, 'right', 'left', 'below', 'above'].filter(function (v, i, a) { return a.indexOf(v) === i; });
+      var best = null;
+      order.forEach(function (o) {
+        if (best && best.score === 0) return;
+        var c = C[o], els = lines.map(function (l, i) { return e('text', { x: p[0] + c[0], y: p[1] + c[1] + i * 13, 'text-anchor': c[2], 'class': l[1] }, g, l[0]); });
+        var b = els.reduce(function (r, el) { var q = el.getBBox(); return [Math.min(r[0], q.x), Math.min(r[1], q.y), Math.max(r[2], q.x + q.width), Math.max(r[3], q.y + q.height)]; }, [1e9, 1e9, -1e9, -1e9]);
+        var score = hits(b) + out(b) * 50;
+        if (!best || score < best.score) { if (best) best.els.forEach(function (el) { el.remove(); }); best = { els: els, b: b, score: score }; }
+        else els.forEach(function (el) { el.remove(); });
+      });
+      taken.push(best.b);
+    }
     CITIES.slice(1).forEach(function (cty, i) {
       var p = P(cty.lat, cty.lon), mx = (home[0] + p[0]) / 2, my = (home[1] + p[1]) / 2;
       var dx = p[0] - home[0], dy = p[1] - home[1], len = Math.hypot(dx, dy);
       var cx = mx + dy / len * len * 0.25, cy = my - dx / len * len * 0.25;
       e('path', { d: 'M' + home[0] + ' ' + home[1] + 'Q' + cx + ' ' + cy + ' ' + p[0] + ' ' + p[1], 'class': 'flight', pathLength: 1, style: 'animation-delay:' + (0.2 + i * 0.35) + 's' });
-      var g = e('g', { 'class': 'pt', style: 'animation-delay:' + (0.9 + i * 0.35) + 's' });
-      e('circle', { cx: p[0], cy: p[1], r: 11, fill: '#07222e', stroke: GOLD, 'stroke-width': 1.5 }, g);
-      icon(e, 'trophy', p[0] - 7, p[1] - 7, 14, GOLD, g);
-      var right = p[0] < w * 0.62;
-      e('text', { x: p[0] + (right ? 16 : -16), y: p[1] - 1, 'text-anchor': right ? 'start' : 'end', 'class': 'city' }, g, cty.name);
-      e('text', { x: p[0] + (right ? 16 : -16), y: p[1] + 12, 'text-anchor': right ? 'start' : 'end', 'class': 'yrs' }, g, cty.years);
     });
     e('circle', { cx: home[0], cy: home[1], r: 5, fill: COLORS.cheer });
     e('circle', { cx: home[0], cy: home[1], r: 10, fill: 'none', stroke: COLORS.cheer, 'stroke-opacity': 0.5 });
-    e('text', { x: home[0] - 14, y: home[1] + 4, 'text-anchor': 'end', 'class': 'city' }, null, 'Guelph');
+    place(home, [['Guelph', 'city']], null, 'left');
+    CITIES.slice(1).forEach(function (cty, i) {
+      var p = P(cty.lat, cty.lon);
+      var g = e('g', { 'class': 'pt', style: 'animation-delay:' + (0.9 + i * 0.35) + 's' });
+      e('circle', { cx: p[0], cy: p[1], r: 11, fill: '#07222e', stroke: GOLD, 'stroke-width': 1.5 }, g);
+      icon(e, 'trophy', p[0] - 7, p[1] - 7, 14, GOLD, g);
+      place(p, [[cty.name, 'city'], [cty.years, 'yrs']], g, p[0] < w * 0.62 ? 'right' : 'left');
+    });
+    // faint region names, only where they don't touch anything else
+    if (GEO) [[47.3, -79.5, 'CANADA'], [34.4, -82.6, 'UNITED STATES'], [35.6, -71.2, 'ATLANTIC']].forEach(function (r) {
+      var q = P(r[0], r[1]), t = e('text', { x: q[0], y: q[1], 'text-anchor': 'middle', 'class': 'region' }, null, r[2]);
+      var bb = t.getBBox(), b = [bb.x - 3, bb.y - 2, bb.x + bb.width + 3, bb.y + bb.height + 2];
+      if (hits(b) > 0 || out(b) > 0) t.remove(); else road.insertBefore(t, road.querySelector('.flight'));
+    });
   }
   [nats, road].forEach(function (n) {
     if (!n) return;
