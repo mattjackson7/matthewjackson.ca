@@ -13,9 +13,9 @@
   function scene(beats, caps) {
     return {
       draw: function (c, s) {
-        var b = Math.min(beats.length - 1, s.step), inA = b > 0 ? V.ease(V.seg(s.p, 0, 0.1)) : 1;
-        if (inA < 1) V.faded(1 - inA, function () { beats[b - 1](c, s.w, s.h, 1); });
-        V.faded(inA, function () { beats[b](c, s.w, s.h, V.seg(s.p, 0.06, 0.94)); });
+        var b = Math.min(beats.length - 1, s.step), outA = b > 0 ? 1 - V.ease(V.seg(s.p, 0, 0.05)) : 0, inA = b > 0 ? V.ease(V.seg(s.p, 0.05, 0.1)) : 1;
+        if (outA > 0) V.faded(outA, function () { beats[b - 1](c, s.w, s.h, 1); });
+        if (inA > 0) V.faded(inA, function () { beats[b](c, s.w, s.h, V.seg(s.p, 0.06, 0.94)); });
         c.globalAlpha = 1;
       },
       caption: function (s) { return caps[Math.min(caps.length - 1, s.step)](V.seg(s.p, 0.06, 0.94)); }

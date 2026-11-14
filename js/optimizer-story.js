@@ -720,7 +720,7 @@
     var lab = nm > 0.5 ? 'softmax: eᶻ / Σeᶻ' : ex > 0.5 ? 'exponentiate: eᶻ' : 'scores z';
     text(c, lab, L.bx, L.my - 12, { size: 12, color: ACC, weight: 500, alpha: lg * (1 - st) });
     if (st > 0 && wt < 1) text(c, 'weights sum to 1', L.bx, L.sy + cs * 0.56 + 18, { size: 11, color: FOAM, alpha: st * (1 - wt) });
-    text(c, 'GRN output per feature', L.mx, L.my - 12, { size: 12, color: FOAM, weight: 500, alpha: mIn * (1 - mg) });
+    text(c, L.bx - L.mx > 175 ? 'GRN output per feature' : 'GRN outputs', L.mx, L.my - 12, { size: 12, color: FOAM, weight: 500, alpha: mIn * (1 - mg) });
     if (mg > 0.85) {
       var a2 = ease(seg(mg, 0.85, 1));
       for (j = 0; j < D; j++) cell(c, L.mx + j * cs, L.xy, cs, cs, XIV[j], { scale: 0.9, alpha: a2, stroke: ACC });
@@ -926,12 +926,15 @@
       ga(c, a * (1 - fl * (d === 0 ? 0 : 1)));
       c.fillStyle = 'rgba(' + G + ',' + (0.95 - d * 0.12) + ')';
       c.fillRect(fx, fy, fw, Math.max(fh, 0));
-      if (st < 0.4) text(c, (v * 100).toFixed(3) + '%', x + bw / 2, yb - hh - 6, { size: 10, color: FOAM, align: 'center', alpha: a * (1 - st * 2.5) });
+      if (st < 0.15) text(c, (v * 100).toFixed(3) + (slotW > 56 ? '%' : ''), x + bw / 2, yb - hh - 6, { size: 10, color: FOAM, align: 'center', alpha: a * (1 - st / 0.15) });
       if (st < 0.5) text(c, 'h' + (d + 1), px + slotW * (d + 0.3) + bw / 2, py + ph + 14, { size: 10, align: 'center', alpha: a * (1 - st * 2) });
       cum += v;
     }
     var sumTxt = Q50[0].map(function (v) { return (v * 100).toFixed(3); }).join(' + ') + ' = ' + (m5 * 100).toFixed(3) + '%';
-    text(c, 'Σₕ q̂₀.₅(h) = ' + (m5 * 100).toFixed(3) + '%  (5-day)', sx + bw / 2, BY(m5) - 10, { size: 11, color: ACC, align: 'center', weight: 500, alpha: st * (1 - fl) });
+    // the sum's label, kept clear of the mu vector on narrow screens
+    var sLab = 'Σₕ q̂₀.₅(h) = ' + (m5 * 100).toFixed(3) + '%  (5-day)', sW = sLab.length * 6.7;
+    if (sx + bw / 2 + sW / 2 > M.x - 12) { sLab = 'Σₕ q̂₀.₅(h) = ' + (m5 * 100).toFixed(3) + '%'; sW = sLab.length * 6.7; }
+    text(c, sLab, Math.min(sx + bw / 2, M.x - 12 - sW / 2), BY(m5) - 10, { size: 11, color: ACC, align: 'center', weight: 500, alpha: st * (1 - fl) });
     var fs = Math.max(10, Math.min(12, w / 52));
     text(c, sumTxt, px, h - 42, { size: fs, color: FOAM, alpha: st * (1 - an * 0.4) });
     text(c, '× 252/5 to annualize:  ' + (m5 * 100).toFixed(3) + '% × 50.4 = ' + (MU[0] * 100).toFixed(1) + '%', px, h - 20, { size: fs, color: ACC, weight: 500, alpha: an });
@@ -1012,11 +1015,16 @@
       var ax = lerp(P.wx, SB.x, rot), ay = lerp(P.wy, SB.y + rowNow * cs, rot);
       for (k = 0; k < N; k++) {
         var gx = ax + k * cs * dx, gy = ay + k * cs * dy;
-        ga(c, 1 - mul);
+        // the copy appears only once it has left the w column, and writes its value along the bottom edge of the cell,
+        // on a dark backing, so it never sits on the number underneath
+        var wa = (1 - mul) * ease(seg(rot, 0, 0.3));
+        ga(c, wa);
         c.strokeStyle = ACC;
         c.lineWidth = 1.6;
         c.strokeRect(gx + 4, gy + 4, cs - 8, cs - 8);
-        text(c, num(W0[k], 2, cs), gx + cs / 2, gy + cs * 0.78, { size: Math.max(8, cs * 0.2), color: ACC, align: 'center', alpha: 1 - mul });
+        var wfs = Math.max(8, cs * 0.2), wtx = num(W0[k], 2, cs), wpw = wtx.length * wfs * 0.62 + 6, wy = gy + cs - 5;
+        ga(c, 0.92 * wa); c.fillStyle = DEEP; c.fillRect(gx + cs / 2 - wpw / 2, wy - wfs * 0.95, wpw, wfs * 1.25);
+        text(c, wtx, gx + cs / 2, wy, { size: wfs, color: ACC, align: 'center', alpha: wa });
       }
     }
     // the result column, one entry per finished row
@@ -1036,6 +1044,8 @@
       { x: P.rx, tx: w * 0.36, vals: SW100, scale: 2.5, out: ST0.v * 100, lab: 'wᵀΣ̂w × 100' },
       { x: M.x, tx: w * 0.68, vals: MU.map(function (v) { return v * 100; }), scale: 10, out: ST0.m * 100, lab: 'wᵀμ (%)' }
     ];
+    // on short screens the Sharpe line has to sit where the two result labels are, so they give way as it arrives
+    var srY = P.ry + 4 * cs + 26 + cs + 52, srTight = srY > h - 14, srA = ease(seg(p, 0.88, 1));
     var firstVis = 1 - ease(seg(p, 0, 0.12));
     if (firstVis > 0) faded(firstVis, function () { BEATS[14](c, w, h, 1); });
     var inA = ease(seg(p, 0, 0.12));
@@ -1067,7 +1077,7 @@
       if (mrg > 0.6) {
         var a2 = ease(seg(mrg, 0.6, 1));
         cell(c, col.tx - cs, outY, cs * 2, cs, col.out, { scale: col.scale, alpha: a2, stroke: ACC, fmt: function (x) { return x.toFixed(ci ? 2 : 3); } });
-        text(c, col.lab, col.tx, outY + cs + 16, { size: 10, color: FOAM, align: 'center', alpha: a2 });
+        text(c, col.lab, col.tx, outY + cs + 16, { size: 10, color: FOAM, align: 'center', alpha: a2 * (srTight ? 1 - srA : 1) });
       }
     });
     if (inA > 0) {
@@ -1203,9 +1213,10 @@
     draw: function (c, s) {
       var beat = Math.min(BEATS.length - 1, s.step), p = s.p;
       // a short crossfade from the previous beat's final frame
-      var inA = beat > 0 ? ease(seg(p, 0, 0.1)) : 1;
-      if (inA < 1) faded(1 - inA, function () { BEATS[beat - 1](c, s.w, s.h, 1); });
-      faded(inA, function () { BEATS[beat](c, s.w, s.h, seg(p, 0.06, 0.94)); });
+      // the old beat fades out before the new one fades in, so their labels never share the canvas
+      var outA = beat > 0 ? 1 - ease(seg(p, 0, 0.05)) : 0, inA = beat > 0 ? ease(seg(p, 0.05, 0.1)) : 1;
+      if (outA > 0) faded(outA, function () { BEATS[beat - 1](c, s.w, s.h, 1); });
+      if (inA > 0) faded(inA, function () { BEATS[beat](c, s.w, s.h, seg(p, 0.06, 0.94)); });
       c.globalAlpha = 1;
     },
     caption: function (s) {

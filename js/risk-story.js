@@ -297,9 +297,9 @@
   function scene(beats, caps) {
     return {
       draw: function (c, s) {
-        var b = Math.min(beats.length - 1, s.step), inA = b > 0 ? ease(seg(s.p, 0, 0.1)) : 1;
-        if (inA < 1) V.faded(1 - inA, function () { beats[b - 1](c, s.w, s.h, 1); });
-        V.faded(inA, function () { beats[b](c, s.w, s.h, seg(s.p, 0.06, 0.94)); });
+        var b = Math.min(beats.length - 1, s.step), outA = b > 0 ? 1 - ease(seg(s.p, 0, 0.05)) : 0, inA = b > 0 ? ease(seg(s.p, 0.05, 0.1)) : 1;
+        if (outA > 0) V.faded(outA, function () { beats[b - 1](c, s.w, s.h, 1); });
+        if (inA > 0) V.faded(inA, function () { beats[b](c, s.w, s.h, seg(s.p, 0.06, 0.94)); });
         c.globalAlpha = 1;
       },
       caption: function (s) { return caps[Math.min(caps.length - 1, s.step)](seg(s.p, 0.06, 0.94)); }
@@ -373,7 +373,7 @@
       symbol(c, '·', x0 + 4 * cs + sym / 2, rowY + 2 * cs, 22, dA);
       symbol(c, '·', rhoX + 4 * cs + sym / 2, rowY + 2 * cs, 22, dA);
       symbol(c, '=', w / 2, (topY + 4 * cs + rowY) / 2 - 4, 22, dA);
-      matrix(c, lerp(topX, rhoX, e), lerp(topY, rowY, e), cs, lerpM(SIG100, RHO, e), { scale: lerp(4.84, 1, e), label: e > 0.6 ? 'ρ' : '' });
+      matrix(c, lerp(topX, rhoX, e), lerp(topY, rowY, e), cs, lerpM(SIG100, RHO, e), { scale: lerp(4.84, 1, e), label: e > 0.6 ? 'ρ' : '', alpha: ease(seg(e, 0.05, 0.3)) });
     },
     // 1.3 Cholesky, each entry worked through
     function (c, w, h, p) {

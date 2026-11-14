@@ -102,7 +102,8 @@
   /* ---------- Drawing ---------- */
   function layout(w, h) {
     var nw = w < 520;
-    return { x: 34, w: w - 110, top: { y: 28, h: h * 0.42 }, bot: { y: h * 0.42 + (nw ? 76 : 64), h: h * 0.4 - (nw ? 12 : 0) } };
+    var by = h * 0.42 + (nw ? 76 : 64);   // the weights band never runs past the bottom of the canvas (it did on phones)
+    return { x: 34, w: w - 110, top: { y: 28, h: h * 0.42 }, bot: { y: by, h: Math.min(h * 0.4 - (nw ? 12 : 0), h - by - 10) } };
   }
   function X(Ly, d) { return Ly.x + d / (DAYS - 1) * Ly.w; }
 
@@ -305,9 +306,9 @@
 
   Story.scene('backtest-wf', {
     draw: function (c, s) {
-      var b = Math.min(beats.length - 1, s.step), inA = b > 0 ? V.ease(V.seg(s.p, 0, 0.1)) : 1;
-      if (inA < 1) V.faded(1 - inA, function () { beats[b - 1](c, s.w, s.h, 1); });
-      V.faded(inA, function () { beats[b](c, s.w, s.h, V.seg(s.p, 0.06, 0.94)); });
+      var b = Math.min(beats.length - 1, s.step), outA = b > 0 ? 1 - V.ease(V.seg(s.p, 0, 0.05)) : 0, inA = b > 0 ? V.ease(V.seg(s.p, 0.05, 0.1)) : 1;
+      if (outA > 0) V.faded(outA, function () { beats[b - 1](c, s.w, s.h, 1); });
+      if (inA > 0) V.faded(inA, function () { beats[b](c, s.w, s.h, V.seg(s.p, 0.06, 0.94)); });
       c.globalAlpha = 1;
     },
     caption: function (s) { return caps[Math.min(caps.length - 1, s.step)](V.seg(s.p, 0.06, 0.94)); }
