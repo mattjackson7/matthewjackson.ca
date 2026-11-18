@@ -289,6 +289,9 @@ img, canvas, svg { display: block; max-width: 100%; }
   overflow: hidden;
 }
 #water { position: absolute; inset: 0; width: 100%; height: 100%; z-index: -1; }
+.hero .spawn { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 0; pointer-events: none; }
+.hero > .name, .hero > .lede, .hero > .actions { position: relative; z-index: 1; }
+.hero > .readout { z-index: 1; }
 .hero::after {
   content: "";
   position: absolute;
@@ -1193,3 +1196,117 @@ img, canvas, svg { display: block; max-width: 100%; }
 
 /* keyboard shortcut hints mean nothing on touch screens */
 @media (hover: none) and (pointer: coarse) { .kbd-hint { display: none; } }
+
+/* sandboxes: live "try it" panels at the end of each project page */
+.sandbox {
+  display: grid;
+  grid-template-columns: minmax(230px, 290px) minmax(0, 1fr);
+  gap: 22px clamp(24px, 3.5vw, 44px);
+  margin-top: 30px;
+  padding-block: 24px;
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+}
+.sb-controls { display: flex; flex-direction: column; gap: 16px; }
+.sb-ctl { display: flex; flex-direction: column; gap: 7px; }
+.sb-head { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; font: 400 0.78rem/1.3 var(--mono); color: var(--mist); }
+.sb-head label, .sb-head span { color: var(--mist); }
+.sb-head i { font-style: italic; font-family: var(--body); }
+.sb-sub { opacity: 0.7; font-size: 0.92em; }
+.sb-val { color: var(--foam); font-weight: 500; white-space: nowrap; }
+.sb-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.sb-chips .chip { padding: 6px 12px; font-size: 0.76rem; }
+.sb-reset { align-self: flex-start; margin-top: 2px; }
+.sandbox input[type="range"] {
+  --f: 0.5;
+  width: 100%;
+  height: 22px;
+  margin: 0;
+  background: none;
+  -webkit-appearance: none;
+  appearance: none;
+  cursor: pointer;
+}
+.sandbox input[type="range"]::-webkit-slider-runnable-track {
+  height: 3px;
+  border-radius: 2px;
+  background: linear-gradient(to right, var(--accent) calc(var(--f) * 100%), rgba(143, 177, 189, 0.3) calc(var(--f) * 100%));
+}
+.sandbox input[type="range"]::-moz-range-track { height: 3px; border-radius: 2px; background: rgba(143, 177, 189, 0.3); }
+.sandbox input[type="range"]::-moz-range-progress { height: 3px; border-radius: 2px; background: var(--accent); }
+.sandbox input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 16px; height: 16px;
+  margin-top: -6.5px;
+  border-radius: 50%;
+  background: var(--accent);
+  border: 3px solid var(--deep);
+  box-shadow: 0 0 0 1.5px var(--accent);
+  transition: transform 0.12s;
+}
+.sandbox input[type="range"]::-moz-range-thumb {
+  width: 10px; height: 10px;
+  border-radius: 50%;
+  background: var(--accent);
+  border: 3px solid var(--deep);
+  box-shadow: 0 0 0 1.5px var(--accent);
+}
+.sandbox input[type="range"]:hover::-webkit-slider-thumb,
+.sandbox input[type="range"]:active::-webkit-slider-thumb { transform: scale(1.15); }
+.sandbox input[type="range"]:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.sb-view { min-width: 0; }
+.sb-view canvas { display: block; width: 100%; touch-action: pan-y; }
+.sb-out {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(118px, 1fr));
+  gap: 1px;
+  margin-top: 16px;
+  background: var(--line);
+  border: 1px solid var(--line);
+}
+.sb-out > div { padding: 12px 14px; background: var(--deep); }
+.sb-out dt { font: 400 0.72rem/1.3 var(--mono); color: var(--mist); }
+.sb-out dd { margin: 5px 0 0; font: 800 clamp(1.25rem, 2vw, 1.6rem) / 1 var(--display); font-variant-numeric: tabular-nums; }
+.sb-read { max-width: 46rem; margin-top: 16px; font-size: 0.98rem; color: var(--mist); min-height: 4.8em; }
+.sb-read b { color: var(--foam); font-weight: 600; }
+@media (max-width: 860px) {
+  .sandbox { grid-template-columns: minmax(0, 1fr); }
+  .sb-controls { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 14px 22px; }
+}
+
+/* swim history: chip rows and lane pickers above the figures */
+.sw-controls { display: flex; flex-wrap: wrap; gap: 10px 24px; margin-bottom: 14px; }
+.sw-row { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.sw-row > span, .sw-sel > span { margin-right: 4px; font: 400 0.72rem/1 var(--mono); color: var(--mist); }
+.sw-row .chip { padding: 6px 12px; font-size: 0.76rem; }
+.res-swim .sw-row .chip[aria-pressed="true"] { background: var(--c); border-color: var(--c); color: var(--deep); }
+.chip[aria-disabled="true"] { opacity: 0.35; cursor: default; }
+.sw-fig canvas { display: block; width: 100%; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); touch-action: pan-y; }
+.sw-fig canvas:focus-visible { outline: 2px solid var(--c, var(--accent)); outline-offset: 2px; }
+.sw-sel { display: flex; align-items: center; gap: 6px; min-width: 0; max-width: 100%; }
+.sw-sel select {
+  min-width: 0; max-width: 100%;
+  padding: 7px 30px 7px 12px;
+  border: 1.5px solid var(--line);
+  border-radius: 999px;
+  background: var(--deep) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%238fb1bd' stroke-width='1.5'/%3E%3C/svg%3E") no-repeat right 12px center;
+  font: 500 0.76rem/1.2 var(--mono);
+  color: var(--foam);
+  -webkit-appearance: none;
+  appearance: none;
+  cursor: pointer;
+  text-overflow: ellipsis;
+}
+.sw-sel select:hover { border-color: var(--mist); }
+.sw-sel select:focus-visible { outline: 2px solid var(--c, var(--accent)); outline-offset: 2px; }
+.sw-sel:nth-child(1) select { border-color: rgba(124, 196, 255, 0.6); }
+.sw-sel:nth-child(2) select { border-color: rgba(255, 209, 102, 0.6); }
+@media (max-width: 560px) { .sw-sel { width: 100%; } .sw-sel select { flex: 1; } }
+
+/* ---------- Risk page: the nightly live snapshot ---------- */
+.live-asof { margin-top: 18px; font: 400 0.78rem/1.5 var(--mono); color: var(--mist); }
+.live-asof b { color: var(--foam); font-weight: 500; }
+.live-fig canvas { width: 100%; display: block; }
+.live-fig canvas:focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; }
+#live-table td.neg { color: var(--rope); }
+

@@ -25,7 +25,7 @@
   <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
   <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"></script>
   <script defer src="js/math.js?v=11"></script>
-  <link rel="stylesheet" href="css/site.css?v=26">
+  <link rel="stylesheet" href="css/site.css?v=29">
 </head>
 <body class="page-risk" data-page="risk">
 
@@ -226,8 +226,40 @@
       </div>
     </section>
 
+    <section class="block" id="sandbox">
+      <h2><span class="no">(6)</span>Sandbox</h2>
+      <p>Build your own portfolio from the engine&rsquo;s four asset classes. 20,000 scenarios are drawn once, then re-correlated through a new Cholesky factor every time you move a slider, so the distribution reshapes as you go. Push the correlations toward a crisis and watch diversification disappear.</p>
+      <div class="sandbox" id="sb-risk">
+        <div class="sb-controls"></div>
+        <div class="sb-view">
+          <canvas role="img" aria-label="Histogram of simulated profit and loss with the VaR and CVaR marked and the tail shaded, beside each asset&rsquo;s component VaR against its standalone VaR. The numbers are listed below the figure."></canvas>
+          <dl class="sb-out"></dl>
+          <p class="sb-read" aria-live="polite"></p>
+        </div>
+      </div>
+    </section>
+
+    <section class="block" id="live">
+      <h2><span class="no">(7)</span>Live snapshot</h2>
+      <p>The same measurements on real markets, refreshed every weekday night. After the US close, a scheduled GitHub Action pulls closing prices for four ETFs standing in for the engine&rsquo;s asset classes (SPY, LQD, DBC and VNQ), holds a fixed $1M portfolio in them at 40/30/15/15, and recomputes its risk: an EWMA covariance with \(\lambda = 0.94\), parametric and historical VaR at 99%, and component VaR. Nothing in this panel is typed in by hand.</p>
+      <div class="live-panel" id="live-panel">
+        <p class="live-asof" id="live-asof">Loading the latest snapshot&hellip;</p>
+        <dl class="stats" id="live-stats"></dl>
+        <figure class="figure live-fig">
+          <canvas id="live-chart" tabindex="0" role="img" aria-label="The portfolio's one-day 99 percent VaR each day over the past year, and today's component VaR for each asset against its standalone VaR. The numbers are in the table below."></canvas>
+          <figcaption><span id="live-read" aria-live="polite"></span></figcaption>
+        </figure>
+        <div class="table-wrap">
+          <table class="data" id="live-table">
+            <thead><tr><th scope="col">Asset</th><th scope="col">ETF</th><th scope="col">Position</th><th scope="col">Close</th><th scope="col">Day</th><th scope="col">EWMA vol</th><th scope="col">1-year vol</th><th scope="col">Component VaR</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
     <section class="block" id="checks">
-      <h2><span class="no">(6)</span>Checks</h2>
+      <h2><span class="no">(8)</span>Checks</h2>
       <p>Running <code>python risk_engine.py</code> executes five built-in checks:</p>
       <ol>
         <li>The Cholesky residual is about \(10^{-15}\), machine precision.</li>
@@ -239,7 +271,7 @@
     </section>
 
     <section class="block" id="code">
-      <h2><span class="no">(7)</span>Code</h2>
+      <h2><span class="no">(9)</span>Code</h2>
       <p>Python, NumPy, pandas, SciPy, yfinance, Streamlit, and Plotly. The dashboard has six tabs: overview, Monte Carlo simulation, VaR and CVaR, stress test, backtesting, and diagnostics (eigenspectrum, Cholesky factor, rolling volatility).</p>
       <ul>
         <li><code>risk_engine.py</code>: the core engine, in eight modules</li>
@@ -261,10 +293,13 @@
   </footer>
 
   <script src="js/site.js?v=16"></script>
-  <script src="js/pathnav.js?v=11"></script>
-  <script src="js/risk.js?v=11"></script>
+  <script src="js/pathnav.js?v=12"></script>
+  <script src="js/risk.js?v=13"></script>
   <script src="js/story.js?v=11"></script>
   <script src="js/viz.js?v=13"></script>
   <script src="js/risk-story.js?v=16"></script>
+  <script src="js/sandbox.js?v=1"></script>
+  <script src="js/sb-risk.js?v=1"></script>
+  <script src="js/risk-live.js?v=1"></script>
 </body>
 </html>

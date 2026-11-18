@@ -34,6 +34,8 @@
         { id: 'component', label: 'Component VaR' },
         { id: 'stress', label: 'Stress test' },
         { id: 'backtest', label: 'Backtest' },
+        { id: 'sandbox', label: 'Sandbox' },
+        { id: 'live', label: 'Live' },
         { id: 'checks', label: 'Checks' },
         { id: 'code', label: 'Code' }
       ],

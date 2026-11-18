@@ -27,6 +27,7 @@
         { id: 'covariance', label: 'Covariance' },
         { id: 'optimize', label: 'Optimization' },
         { id: 'backtest', label: 'Backtest' },
+        { id: 'sandbox', label: 'Sandbox' },
         { id: 'code', label: 'Code' }
       ],
       cross: function (s, a) { return frontier(a); },

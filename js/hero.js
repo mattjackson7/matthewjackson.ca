@@ -1,7 +1,8 @@
 /* Hero: a Monte Carlo simulation of geometric Brownian motion,
    dS = mu S dt + sigma S dW, drawn across a pool of lane ropes.
    The random shocks are fixed once, so changing sigma reshapes the
-   same paths instead of rolling new ones. */
+   same paths instead of rolling new ones. Clicking or tapping the water
+   launches one more path from that spot, at the current sigma. */
 (function () {
   var canvas = document.getElementById('water');
   var hero = document.getElementById('top');
@@ -12,9 +13,15 @@
   if (!canvas || !hero) return;
 
   var ctx = canvas.getContext('2d');
+  // launched paths get their own layer above the hero's dark fade, so they show wherever they start
+  var spawnCv = document.createElement('canvas');
+  spawnCv.className = 'spawn';
+  spawnCv.setAttribute('aria-hidden', 'true');
+  canvas.after(spawnCv);
+  var sctx = spawnCv.getContext('2d');
   var reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   var canHover = window.matchMedia('(hover: hover)').matches;
-  if (!canHover && hint) hint.hidden = true;
+  if (!canHover && hint) hint.textContent = 'Tap the water to launch a price path from there.';
 
   var PATHS = 64;       // number of simulated paths
   var STEPS = 260;      // time steps across the width of the page
@@ -42,6 +49,7 @@
   var sigma = BASE_SIGMA, target = BASE_SIGMA;
   var shown = reduceMotion ? STEPS : 0;
   var startTime = 0, raf = 0;
+  var spawned = [], SPAWN_MAX = 14, SPAWN_DRAW = 1300, SPAWN_HOLD = 1800, SPAWN_FADE = 1600;
 
   // lane ropes are drawn once per resize onto a hidden canvas
   var lanes = document.createElement('canvas');
@@ -120,6 +128,8 @@
       ctx.setLineDash([]);
     }
 
+    drawSpawned(xs, dt, scale);
+
     // swimmer heads
     ctx.globalAlpha = 1;
     for (var d = 0; d < heads.length; d += 2) {
@@ -136,6 +146,48 @@
 
   function ease(t) { return 1 - Math.pow(1 - t, 3); }
 
+  // paths launched by a click: each swims from the click to the right edge, holds, then fades
+  function drawSpawned(xs, dt, scale) {
+    var now = performance.now();
+    sctx.clearRect(0, 0, w, h);
+    sctx.lineJoin = sctx.lineCap = 'round';
+    spawned = spawned.filter(function (p) { return now - p.born < SPAWN_DRAW + SPAWN_HOLD + SPAWN_FADE; });
+    spawned.forEach(function (p) {
+      var age = now - p.born, n = p.shocks.length;
+      var upto = reduceMotion ? n : Math.floor(n * ease(Math.min(1, age / SPAWN_DRAW)));
+      var a = Math.min(1, Math.max(0, 1 - (age - SPAWN_DRAW - SPAWN_HOLD) / SPAWN_FADE));
+      var drift = (MU - 0.5 * p.sigma * p.sigma) * dt, vol = p.sigma * Math.sqrt(dt);
+      var acc = 0, x = p.x, y = p.y;
+      sctx.beginPath();
+      sctx.moveTo(x, y);
+      for (var k = 0; k < upto; k++) {
+        acc += drift + vol * p.shocks[k];
+        x = p.x + (k + 1) * xs;
+        y = p.y - acc * scale;
+        sctx.lineTo(x, y);
+      }
+      sctx.strokeStyle = ROPE;
+      sctx.globalAlpha = 0.9 * a;
+      sctx.lineWidth = 1.8;
+      sctx.stroke();
+      // a ring spreading from where it was launched
+      var r = Math.min(1, age / 700);
+      if (r < 1 && !reduceMotion) {
+        sctx.globalAlpha = 0.6 * (1 - r);
+        sctx.lineWidth = 1.2;
+        sctx.beginPath();
+        sctx.arc(p.x, p.y, 4 + 22 * r, 0, Math.PI * 2);
+        sctx.stroke();
+      }
+      sctx.globalAlpha = a;
+      sctx.fillStyle = FOAM;
+      sctx.beginPath(); sctx.arc(x, y, 4.6, 0, Math.PI * 2); sctx.fill();
+      sctx.fillStyle = ROPE;
+      sctx.beginPath(); sctx.arc(x, y, 3, 0, Math.PI * 2); sctx.fill();
+    });
+    sctx.globalAlpha = 1;
+  }
+
   function frame(now) {
     raf = 0;
     if (!startTime) startTime = now;
@@ -148,7 +200,7 @@
 
     render();
     if (sigmaOut) sigmaOut.textContent = sigma.toFixed(2);
-    if (shown < STEPS || sigma !== target) raf = requestAnimationFrame(frame);
+    if (shown < STEPS || sigma !== target || spawned.length) raf = requestAnimationFrame(frame);
   }
 
   function kick() { if (!raf) raf = requestAnimationFrame(frame); }
@@ -161,6 +213,9 @@
     canvas.width = Math.round(w * dpr);
     canvas.height = Math.round(h * dpr);
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    spawnCv.width = canvas.width;
+    spawnCv.height = canvas.height;
+    sctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     drawLanes();
     kick();
   }
@@ -170,6 +225,16 @@
     var r = hero.getBoundingClientRect();
     var y = Math.min(1, Math.max(0, (e.clientY - r.top) / r.height));
     target = 0.08 + (1 - y) * 0.5;
+    kick();
+  });
+  hero.addEventListener('pointerdown', function (e) {
+    if (e.button !== 0 || e.target.closest('a, button, input')) return;
+    var r = canvas.getBoundingClientRect(), x = e.clientX - r.left, y = e.clientY - r.top;
+    var n = Math.max(1, Math.ceil((w - x) / (w / STEPS)));
+    var sh = new Float32Array(n);
+    for (var k = 0; k < n; k++) sh[k] = gauss();
+    spawned.push({ x: x, y: y, shocks: sh, sigma: sigma, born: performance.now() });
+    if (spawned.length > SPAWN_MAX) spawned.shift();
     kick();
   });
   hero.addEventListener('pointerleave', function () {

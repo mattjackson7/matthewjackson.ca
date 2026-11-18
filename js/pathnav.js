@@ -227,7 +227,7 @@
 
     function frame(now) {
       raf = 0;
-      var dt = lastFrame ? Math.min(0.05, (now - lastFrame) / 1000) : 1 / 60;
+      var dt = lastFrame ? Math.min(0.05, Math.max(1 / 240, (now - lastFrame) / 1000)) : 1 / 60;
       lastFrame = now;
 
       if (mode === 'settle') {

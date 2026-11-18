@@ -25,7 +25,7 @@
   <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
   <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"></script>
   <script defer src="js/math.js?v=11"></script>
-  <link rel="stylesheet" href="css/site.css?v=26">
+  <link rel="stylesheet" href="css/site.css?v=29">
 </head>
 <body class="page-options" data-page="options">
 
@@ -225,8 +225,21 @@
       </div>
     </section>
 
+    <section class="block" id="sandbox">
+      <h2><span class="no">(5)</span>Sandbox</h2>
+      <p>Price any option yourself. Everything here is computed live in your browser with the same methods as above: Black-Scholes in closed form for European options, and a 400-step binomial tree for American ones. Move the sliders and watch the price, its time value and the Greeks respond.</p>
+      <div class="sandbox" id="sb-options">
+        <div class="sb-controls"></div>
+        <div class="sb-view">
+          <canvas role="img" aria-label="The option&rsquo;s value today against spot price, with its payoff at expiry, the time value between them, and the current spot&rsquo;s value and delta. The numbers are listed below the figure."></canvas>
+          <dl class="sb-out"></dl>
+          <p class="sb-read" aria-live="polite"></p>
+        </div>
+      </div>
+    </section>
+
     <section class="block" id="results">
-      <h2><span class="no">(5)</span>Results</h2>
+      <h2><span class="no">(6)</span>Results</h2>
       <dl class="facts">
         <div><dt>Live SPY chain</dt><dd>&lt; 4 s<small>3,800+ contracts across 32 expiries, fetched and IV-solved</small></dd></div>
         <div><dt>Put-call parity</dt><dd>\(&lt; 10^{-10}\)<small>Holds to machine precision</small></dd></div>
@@ -236,7 +249,7 @@
     </section>
 
     <section class="block" id="code">
-      <h2><span class="no">(6)</span>Code</h2>
+      <h2><span class="no">(7)</span>Code</h2>
       <p>Python, NumPy, SciPy, pandas, yfinance, Streamlit, and Plotly. The dashboard has two tabs: a pricer with all five Greeks plotted against spot and time to expiry, and a market data tab that fetches a ticker's chain and draws its implied volatility surface.</p>
       <ul>
         <li><code>options_pricer.py</code>: BSM, Greeks, the binomial tree, and the IV solver, scalar and vectorized</li>
@@ -259,10 +272,12 @@
   </footer>
 
   <script src="js/site.js?v=16"></script>
-  <script src="js/pathnav.js?v=11"></script>
-  <script src="js/options.js?v=11"></script>
+  <script src="js/pathnav.js?v=12"></script>
+  <script src="js/options.js?v=12"></script>
   <script src="js/story.js?v=11"></script>
   <script src="js/viz.js?v=13"></script>
   <script src="js/options-story.js?v=14"></script>
+  <script src="js/sandbox.js?v=1"></script>
+  <script src="js/sb-options.js?v=1"></script>
 </body>
 </html>

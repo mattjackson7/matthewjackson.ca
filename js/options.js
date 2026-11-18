@@ -5,7 +5,7 @@
 
   /* ---------- Navigator: a recombining binomial tree ---------- */
   // one price path through the lattice, one node per section (j = net up moves)
-  var PATH = [0, 1, 2, 1, 0, -1, 0];
+  var PATH = [0, 1, 2, 1, 0, -1, 0, 1];
   var STEP = 0.44 / (PATH.length - 1); // across-axis spacing between price levels
 
   if (window.PathNav) {
@@ -17,6 +17,7 @@
         { id: 'tree', label: 'Binomial tree' },
         { id: 'greeks', label: 'Greeks' },
         { id: 'iv', label: 'Implied vol' },
+        { id: 'sandbox', label: 'Sandbox' },
         { id: 'results', label: 'Results' },
         { id: 'code', label: 'Code' }
       ],

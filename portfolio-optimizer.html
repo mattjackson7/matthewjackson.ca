@@ -25,7 +25,7 @@
   <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
   <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"></script>
   <script defer src="js/math.js?v=11"></script>
-  <link rel="stylesheet" href="css/site.css?v=26">
+  <link rel="stylesheet" href="css/site.css?v=29">
 </head>
 <body class="page-optimizer" data-page="optimizer">
 
@@ -242,8 +242,21 @@
       </div>
     </section>
 
+    <section class="block" id="sandbox">
+      <h2><span class="no">(6)</span>Sandbox</h2>
+      <p>Set your own forecasts. Drag an asset up or down on the figure, or use the sliders, and the optimizer re-solves for the maximum-Sharpe portfolio instantly. Small changes in expected returns can swing the weights a long way, which is why the forecasts and the covariance get so much care. Illustrative data, the same five assets as the figure at the top of the page.</p>
+      <div class="sandbox" id="sb-optimizer">
+        <div class="sb-controls"></div>
+        <div class="sb-view">
+          <canvas role="img" aria-label="Risk-return plane with five draggable assets, the efficient frontier, the capital market line and the maximum-Sharpe portfolio, beside a bar chart of its weights. The numbers are listed below the figure."></canvas>
+          <dl class="sb-out"></dl>
+          <p class="sb-read" aria-live="polite"></p>
+        </div>
+      </div>
+    </section>
+
     <section class="block" id="code">
-      <h2><span class="no">(6)</span>Code</h2>
+      <h2><span class="no">(7)</span>Code</h2>
       <p>Python, PyTorch with PyTorch Forecasting, NumPy, SciPy, yfinance, Streamlit, and Plotly. Built-in checks confirm the quantiles stay ordered, the covariance is symmetric positive definite, and the weights sum to one to machine precision.</p>
       <ul>
         <li><code>model.py</code>: the TFT, dataset construction, training, and prediction</li>
@@ -267,11 +280,13 @@
   </footer>
 
   <script src="js/site.js?v=16"></script>
-  <script src="js/pathnav.js?v=11"></script>
-  <script src="js/optimizer.js?v=11"></script>
+  <script src="js/pathnav.js?v=12"></script>
+  <script src="js/optimizer.js?v=12"></script>
   <script src="js/story.js?v=11"></script>
   <script src="js/viz.js?v=13"></script>
   <script src="js/optimizer-backtest.js?v=18"></script>
   <script src="js/optimizer-story.js?v=16"></script>
+  <script src="js/sandbox.js?v=1"></script>
+  <script src="js/sb-optimizer.js?v=1"></script>
 </body>
 </html>
